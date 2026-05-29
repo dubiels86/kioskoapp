@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Table,
@@ -371,9 +371,8 @@ export function WarehouseView() {
               </TableRow>
             ) : (
               warehouses.map((wh) => (
-                <>
+                <React.Fragment key={wh.id}>
                   <TableRow
-                    key={wh.id}
                     className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/50"
                     onClick={() => setExpandedWarehouse(expandedWarehouse === wh.id ? null : wh.id)}
                   >
@@ -541,7 +540,7 @@ export function WarehouseView() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               ))
             )}
           </TableBody>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Table,
@@ -379,9 +379,8 @@ export function InventoryView() {
                   </TableRow>
                 ) : (
                   paginatedProducts.map((product) => (
-                    <>
+                    <React.Fragment key={product.id}>
                       <TableRow
-                        key={product.id}
                         className={`cursor-pointer ${!product.isActive ? 'opacity-60' : ''}`}
                         onClick={() => setExpandedStock(expandedStock === product.id ? null : product.id)}
                       >
@@ -508,7 +507,7 @@ export function InventoryView() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>
