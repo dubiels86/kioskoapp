@@ -20,6 +20,7 @@ const VIEW_LABELS: Record<AppView, string> = {
   cash: 'Caja',
   repairs: 'Reparaciones',
   reports: 'Reportes',
+  settings: 'Ajustes',
 }
 
 export function AppHeader() {

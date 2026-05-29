@@ -1,6 +1,6 @@
 'use client'
 
-import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3 } from 'lucide-react'
+import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { AppView } from '@/lib/types'
 import { Separator } from '@/components/ui/separator'
@@ -19,6 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { view: 'cash', label: 'Caja', icon: Banknote },
   { view: 'repairs', label: 'Reparaciones', icon: Wrench },
   { view: 'reports', label: 'Reportes', icon: BarChart3 },
+  { view: 'settings', label: 'Ajustes', icon: Settings },
 ]
 
 interface AppSidebarProps {

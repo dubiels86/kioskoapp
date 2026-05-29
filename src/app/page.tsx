@@ -9,6 +9,7 @@ import { PurchasesView } from '@/components/purchases/purchases-view'
 import { CashView } from '@/components/cash/cash-view'
 import { RepairsView } from '@/components/repairs/repairs-view'
 import { ReportsView } from '@/components/reports/reports-view'
+import { SettingsView } from '@/components/settings/settings-view'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { AppView } from '@/lib/types'
 
@@ -19,6 +20,7 @@ const MODULE_COMPONENTS: Record<AppView, React.ComponentType> = {
   cash: CashView,
   repairs: RepairsView,
   reports: ReportsView,
+  settings: SettingsView,
 }
 
 const VIEW_LABELS: Record<AppView, string> = {
@@ -28,6 +30,7 @@ const VIEW_LABELS: Record<AppView, string> = {
   cash: 'Caja',
   repairs: 'Reparaciones',
   reports: 'Reportes',
+  settings: 'Ajustes',
 }
 
 export default function Home() {

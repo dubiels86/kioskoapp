@@ -12,7 +12,7 @@ export type CashMovementType = 'ENTRADA' | 'SALIDA';
 
 export type WarehouseType = 'PRINCIPAL' | 'VENTAS' | 'SECUNDARIO';
 
-export type AppView = 'pos' | 'inventory' | 'purchases' | 'cash' | 'repairs' | 'reports';
+export type AppView = 'pos' | 'inventory' | 'purchases' | 'cash' | 'repairs' | 'reports' | 'settings';
 
 export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
   PRINCIPAL: 'Depósito Principal',
@@ -63,6 +63,53 @@ export const REPAIR_STATUS_LABELS: Record<RepairStatus, string> = {
   ENTREGADO: 'Entregado',
   CANCELADO: 'Cancelado',
 };
+
+export type RolePermission =
+  | 'pos.access'
+  | 'pos.refund'
+  | 'inventory.access'
+  | 'inventory.manage'
+  | 'purchases.access'
+  | 'purchases.manage'
+  | 'cash.access'
+  | 'cash.open'
+  | 'cash.close'
+  | 'repairs.access'
+  | 'repairs.manage'
+  | 'reports.access'
+  | 'settings.access'
+  | 'settings.users'
+  | 'settings.roles'
+  | 'settings.all'
+
+export const ROLE_PERMISSION_LABELS: Record<RolePermission, string> = {
+  'pos.access': 'Acceso a POS',
+  'pos.refund': 'Realizar devoluciones',
+  'inventory.access': 'Acceso a Inventario',
+  'inventory.manage': 'Gestionar inventario',
+  'purchases.access': 'Acceso a Compras',
+  'purchases.manage': 'Gestionar compras',
+  'cash.access': 'Acceso a Caja',
+  'cash.open': 'Abrir caja',
+  'cash.close': 'Cerrar caja',
+  'repairs.access': 'Acceso a Reparaciones',
+  'repairs.manage': 'Gestionar reparaciones',
+  'reports.access': 'Acceso a Reportes',
+  'settings.access': 'Acceso a Ajustes',
+  'settings.users': 'Gestionar usuarios',
+  'settings.roles': 'Gestionar roles',
+  'settings.all': 'Acceso total a ajustes',
+}
+
+export const ROLE_PERMISSION_GROUPS: { group: string; permissions: RolePermission[] }[] = [
+  { group: 'Punto de Venta', permissions: ['pos.access', 'pos.refund'] },
+  { group: 'Inventario', permissions: ['inventory.access', 'inventory.manage'] },
+  { group: 'Compras', permissions: ['purchases.access', 'purchases.manage'] },
+  { group: 'Caja', permissions: ['cash.access', 'cash.open', 'cash.close'] },
+  { group: 'Reparaciones', permissions: ['repairs.access', 'repairs.manage'] },
+  { group: 'Reportes', permissions: ['reports.access'] },
+  { group: 'Ajustes', permissions: ['settings.access', 'settings.users', 'settings.roles', 'settings.all'] },
+]
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   ENTRADA: 'Entrada',

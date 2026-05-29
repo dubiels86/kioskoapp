@@ -214,3 +214,37 @@ model RepairPart {
   costPrice Float   @default(0)
   salePrice Float   @default(0)
 }
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  permissions String   @default("[]") // JSON array of permission strings
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username   String   @unique
+  password   String
+  name      String
+  email     String?
+  phone     String?
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String // JSON string for flexible value storage
+  label String // Human-readable label
+  group String @default("general") // Grouping: general, currency, denominations, etc.
+}
