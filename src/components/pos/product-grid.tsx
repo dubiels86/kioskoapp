@@ -1,0 +1,261 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { useAppStore } from '@/lib/store'
+import { formatCurrency } from '@/lib/format'
+import type { CartItem } from '@/lib/types'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Search, Package } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+
+interface Product {
+  id: string
+  name: string
+  barcode?: string | null
+  sku?: string | null
+  categoryId?: string | null
+  category?: { id: string; name: string } | null
+  costPrice: number
+  salePrice: number
+  stock: number
+  minStock: number
+  unit: string
+  isActive: boolean
+}
+
+interface Category {
+  id: string
+  name: string
+  productCount: number
+}
+
+export function ProductGrid() {
+  const {
+    posSearch,
+    setPosSearch,
+    posCategoryFilter,
+    setPosCategoryFilter,
+    addToCart,
+  } = useAppStore()
+
+  const [debouncedSearch, setDebouncedSearch] = useState(posSearch)
+  const [localSearch, setLocalSearch] = useState(posSearch)
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(localSearch)
+      setPosSearch(localSearch)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [localSearch, setPosSearch])
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories')
+      if (!res.ok) throw new Error('Error cargando categorías')
+      return res.json()
+    },
+  })
+
+  // Fetch products
+  const { data: products = [], isLoading } = useQuery<Product[]>({
+    queryKey: ['products', debouncedSearch, posCategoryFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams()
+      if (debouncedSearch) params.set('search', debouncedSearch)
+      if (posCategoryFilter && posCategoryFilter !== 'all') {
+        params.set('categoryId', posCategoryFilter)
+      }
+      params.set('active', 'true')
+      const res = await fetch(`/api/products?${params.toString()}`)
+      if (!res.ok) throw new Error('Error cargando productos')
+      return res.json()
+    },
+  })
+
+  const handleAddToCart = useCallback(
+    (product: Product) => {
+      if (product.stock <= 0) return
+      const cartItem: CartItem = {
+        productId: product.id,
+        productName: product.name,
+        barcode: product.barcode || undefined,
+        quantity: 1,
+        costPrice: product.costPrice,
+        salePrice: product.salePrice,
+        subtotal: product.salePrice,
+        costSubtotal: product.costPrice,
+        stock: product.stock,
+      }
+      addToCart(cartItem)
+    },
+    [addToCart]
+  )
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 pb-4 shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder="Buscar por nombre o código..."
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            className="pl-9 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+          />
+        </div>
+        <Select
+          value={posCategoryFilter}
+          onValueChange={setPosCategoryFilter}
+        >
+          <SelectTrigger className="w-full sm:w-52 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+            <SelectValue placeholder="Categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Product Grid */}
+      <ScrollArea className="flex-1 -mx-1">
+        <div className="px-1">
+          {isLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+              <Package className="w-12 h-12 mb-3 opacity-40" />
+              <p className="text-lg font-medium">No se encontraron productos</p>
+              <p className="text-sm mt-1">
+                Intentá con otra búsqueda o categoría
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAdd={handleAddToCart}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+}
+
+function ProductCard({
+  product,
+  onAdd,
+}: {
+  product: Product
+  onAdd: (product: Product) => void
+}) {
+  const isOutOfStock = product.stock <= 0
+  const isLowStock = !isOutOfStock && product.stock <= product.minStock
+
+  return (
+    <button
+      onClick={() => onAdd(product)}
+      disabled={isOutOfStock}
+      className={`
+        group relative flex flex-col items-start p-4 rounded-xl border transition-all duration-150 text-left
+        ${
+          isOutOfStock
+            ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/5 hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
+        }
+      `}
+    >
+      {/* Badges */}
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+        {product.category && (
+          <Badge
+            variant="secondary"
+            className="text-[10px] px-1.5 py-0 h-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium"
+          >
+            {product.category.name}
+          </Badge>
+        )}
+        {isOutOfStock && (
+          <Badge
+            variant="destructive"
+            className="text-[10px] px-1.5 py-0 h-5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-0"
+          >
+            Agotado
+          </Badge>
+        )}
+        {isLowStock && (
+          <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-0">
+            Bajo stock
+          </Badge>
+        )}
+      </div>
+
+      {/* Product Name */}
+      <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-tight mb-1 line-clamp-2">
+        {product.name}
+      </h3>
+
+      {/* Price */}
+      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-auto">
+        {formatCurrency(product.salePrice)}
+      </p>
+
+      {/* Stock indicator */}
+      <div className="flex items-center gap-1.5 mt-2">
+        <span
+          className={`w-1.5 h-1.5 rounded-full ${
+            isOutOfStock
+              ? 'bg-red-400'
+              : isLowStock
+                ? 'bg-amber-400'
+                : 'bg-emerald-400'
+          }`}
+        />
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          {isOutOfStock ? 'Sin stock' : `${product.stock} ${product.stock === 1 ? product.unit : product.unit + 's'}`}
+        </span>
+      </div>
+    </button>
+  )
+}
+
+function ProductCardSkeleton() {
+  return (
+    <div className="flex flex-col p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+      <Skeleton className="h-5 w-16 mb-2" />
+      <Skeleton className="h-4 w-full mb-1" />
+      <Skeleton className="h-4 w-2/3 mb-3" />
+      <Skeleton className="h-7 w-24 mb-2" />
+      <Skeleton className="h-3 w-20" />
+    </div>
+  )
+}

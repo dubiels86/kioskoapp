@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  barcode     String?  @unique
+  sku         String?  @unique
+  categoryId  String?
+  category    Category?      @relation(fields: [categoryId], references: [id])
+  costPrice   Float    // Precio de costo
+  salePrice   Float    // Precio de venta
+  stock       Int      @default(0)
+  minStock    Int      @default(5)
+  unit        String   @default("unidad")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  movements   InventoryMovement[]
+  purchaseItems PurchaseItem[]
+  saleItems   SaleItem[]
+  repairParts RepairPart[]
+}
+
+model InventoryMovement {
+  id            String   @id @default(cuid())
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id])
+  type          String   // ENTRADA, SALIDA, AJUSTE, COMPRA, VENTA, MERMA
+  quantity      Int
+  previousStock Int
+  newStock      Int
+  reason        String?
+  referenceId   String?
+  createdAt     DateTime @default(now())
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  purchases Purchase[]
+}
+
+model Purchase {
+  id            String   @id @default(cuid())
+  supplierId    String?
+  supplier      Supplier? @relation(fields: [supplierId], references: [id])
+  invoiceNumber String?
+  totalAmount   Float
+  status        String   @default("PENDIENTE")
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  items         PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  costPrice  Float
+  subtotal   Float
+}
+
+model Sale {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
+  cashRegisterId  String?
+  cashRegister    CashRegister? @relation(fields: [cashRegisterId], references: [id])
+  paymentMethod   String        // EFECTIVO, TRANSFERENCIA, CUENTA_CASA
+  subtotal        Float
+  discount        Float         @default(0)
+  total           Float
+  costTotal       Float         // Total al precio de costo
+  customerName    String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  items           SaleItem[]
+}
+
+model SaleItem {
+  id           String  @id @default(cuid())
+  saleId       String
+  sale         Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product @relation(fields: [productId], references: [id])
+  quantity     Int
+  costPrice    Float
+  salePrice    Float
+  subtotal     Float
+  costSubtotal Float
+}
+
+model CashRegister {
+  id             String         @id @default(cuid())
+  openingAmount  Float
+  closingAmount  Float?
+  expectedAmount Float?
+  difference     Float?
+  status         String         @default("ABIERTA")
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+  sales          Sale[]
+  movements      CashMovement[]
+}
+
+model CashMovement {
+  id             String        @id @default(cuid())
+  cashRegisterId String
+  cashRegister   CashRegister  @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
+  type           String        // ENTRADA, SALIDA
+  amount         Float
+  reason         String
+  createdAt      DateTime      @default(now())
+}
+
+model Repair {
+  id            String       @id @default(cuid())
+  customerName  String
+  customerPhone String?
+  device        String
+  brand         String?
+  model         String?
+  serialNumber  String?
+  issue         String
+  diagnosis     String?
+  repairCost    Float        @default(0)
+  partsCost     Float        @default(0)
+  totalCost     Float        @default(0)
+  status        String       @default("RECIBIDO")
+  receivedAt    DateTime     @default(now())
+  completedAt   DateTime?
+  deliveredAt   DateTime?
+  notes         String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  parts         RepairPart[]
+}
+
+model RepairPart {
+  id        String  @id @default(cuid())
+  repairId  String
+  repair    Repair  @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  partName  String
+  quantity  Int     @default(1)
+  costPrice Float   @default(0)
+  salePrice Float   @default(0)
+}
