@@ -48,6 +48,7 @@ import {
   ArrowRightLeft,
   Warehouse as WarehouseIcon,
   Expand,
+  PackagePlus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
@@ -56,6 +57,7 @@ import { CategoryFormDialog } from './category-form-dialog'
 import { MovementTable } from './movement-table'
 import { WarehouseView } from './warehouse-view'
 import { StockTransferDialog } from './stock-transfer-dialog'
+import { StockReceivingDialog } from './stock-receiving-dialog'
 
 interface Category {
   id: string
@@ -115,6 +117,7 @@ export function InventoryView() {
   const [deleteCategoryConfirmOpen, setDeleteCategoryConfirmOpen] = useState(false)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+  const [receivingDialogOpen, setReceivingDialogOpen] = useState(false)
 
   // Stock expansion
   const [expandedStock, setExpandedStock] = useState<string | null>(null)
@@ -304,11 +307,19 @@ export function InventoryView() {
               </Button>
               <Button
                 variant="outline"
+                onClick={() => setReceivingDialogOpen(true)}
+                className="gap-1.5"
+              >
+                <PackagePlus className="h-4 w-4" />
+                Recibir Stock
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setTransferDialogOpen(true)}
                 className="gap-1.5"
               >
                 <ArrowRightLeft className="h-4 w-4" />
-                Transferir Stock
+                Transferir
               </Button>
               <Button
                 variant="outline"
@@ -637,6 +648,12 @@ export function InventoryView() {
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         category={editingCategory}
+      />
+
+      {/* Stock Receiving Dialog */}
+      <StockReceivingDialog
+        open={receivingDialogOpen}
+        onOpenChange={setReceivingDialogOpen}
       />
 
       {/* Stock Transfer Dialog */}
