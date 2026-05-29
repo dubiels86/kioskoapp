@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Eye, Truck, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Eye, Truck, ChevronLeft, ChevronRight, Warehouse } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { PURCHASE_STATUS_LABELS } from '@/lib/types'
 import type { PurchaseStatus } from '@/lib/types'
@@ -43,6 +43,12 @@ interface Purchase {
     costPrice: number
     subtotal: number
     product: { id: string; name: string }
+    warehouse?: {
+      id: string
+      name: string
+      code: string
+      type: string
+    } | null
   }[]
 }
 
@@ -134,6 +140,7 @@ export function PurchasesView() {
             <TableRow>
               <TableHead className="w-[50px]">#</TableHead>
               <TableHead>Proveedor</TableHead>
+              <TableHead>Depósito</TableHead>
               <TableHead>Factura</TableHead>
               <TableHead className="text-right">Total</TableHead>
               <TableHead>Estado</TableHead>
@@ -144,53 +151,67 @@ export function PurchasesView() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Cargando compras...
                 </TableCell>
               </TableRow>
             ) : paginatedPurchases.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No se encontraron compras
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedPurchases.map((purchase, idx) => (
-                <TableRow key={purchase.id}>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {(page - 1) * PAGE_SIZE + idx + 1}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {purchase.supplier?.name || 'Sin proveedor'}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {purchase.invoiceNumber || '—'}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {formatCurrency(purchase.totalAmount)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="secondary"
-                      className={getStatusBadgeClass(purchase.status)}
-                    >
-                      {PURCHASE_STATUS_LABELS[purchase.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                    {formatDate(purchase.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDetailPurchaseId(purchase.id)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              paginatedPurchases.map((purchase, idx) => {
+                // Get warehouse from first item (all items share same warehouse)
+                const warehouse = purchase.items?.[0]?.warehouse
+                return (
+                  <TableRow key={purchase.id}>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {(page - 1) * PAGE_SIZE + idx + 1}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {purchase.supplier?.name || 'Sin proveedor'}
+                    </TableCell>
+                    <TableCell>
+                      {warehouse ? (
+                        <span className="inline-flex items-center gap-1 text-sm">
+                          <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+                          {warehouse.name}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {purchase.invoiceNumber || '—'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(purchase.totalAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className={getStatusBadgeClass(purchase.status)}
+                      >
+                        {PURCHASE_STATUS_LABELS[purchase.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      {formatDate(purchase.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDetailPurchaseId(purchase.id)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>

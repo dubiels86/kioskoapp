@@ -9,6 +9,14 @@ export async function GET() {
         items: {
           include: {
             product: true,
+            warehouse: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                type: true,
+              },
+            },
           },
         },
       },
@@ -28,13 +36,24 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { supplierId, invoiceNumber, notes, items } = body
+    const { supplierId, invoiceNumber, notes, items, warehouseId } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: 'La compra debe tener al menos un item' },
         { status: 400 }
       )
+    }
+
+    // Validate warehouseId if provided
+    if (warehouseId) {
+      const warehouse = await db.warehouse.findUnique({ where: { id: warehouseId } })
+      if (!warehouse || !warehouse.isActive) {
+        return NextResponse.json(
+          { error: 'Depósito no encontrado o inactivo' },
+          { status: 400 }
+        )
+      }
     }
 
     const purchase = await db.$transaction(async (tx) => {
@@ -49,7 +68,16 @@ export async function POST(request: Request) {
 
       const productMap = new Map(products.map((p) => [p.id, p]))
 
+      // Determine warehouse for each item (item-level overrides global)
+      const itemWarehouses: string[] = []
       for (const item of items) {
+        const whId = item.warehouseId || warehouseId
+        if (!whId) {
+          const product = productMap.get(item.productId)
+          throw new Error(`No se especificó depósito para el producto ${product?.name || item.productId}`)
+        }
+        itemWarehouses.push(whId)
+
         const product = productMap.get(item.productId)
         if (!product) {
           throw new Error(`Producto no encontrado: ${item.productId}`)
@@ -67,8 +95,9 @@ export async function POST(request: Request) {
           status: 'RECIBIDA',
           notes: notes || null,
           items: {
-            create: items.map((item: { productId: string; quantity: number; costPrice: number }) => ({
+            create: items.map((item: { productId: string; quantity: number; costPrice: number }, index: number) => ({
               productId: item.productId,
+              warehouseId: itemWarehouses[index],
               quantity: item.quantity,
               costPrice: parseFloat(item.costPrice),
               subtotal: item.quantity * parseFloat(item.costPrice),
@@ -80,29 +109,74 @@ export async function POST(request: Request) {
           items: {
             include: {
               product: true,
+              warehouse: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  type: true,
+                },
+              },
             },
           },
         },
       })
 
       // Update stock and create inventory movements for each item
-      for (const item of items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
         const product = productMap.get(item.productId)!
-        const previousStock = product.stock
-        const newStock = previousStock + item.quantity
+        const whId = itemWarehouses[i]
 
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: newStock },
+        // Upsert ProductStock for the specific warehouse
+        const existingStock = await tx.productStock.findUnique({
+          where: {
+            productId_warehouseId: {
+              productId: item.productId,
+              warehouseId: whId,
+            },
+          },
         })
 
+        if (existingStock) {
+          await tx.productStock.update({
+            where: { id: existingStock.id },
+            data: {
+              stock: {
+                increment: item.quantity,
+              },
+            },
+          })
+        } else {
+          await tx.productStock.create({
+            data: {
+              productId: item.productId,
+              warehouseId: whId,
+              stock: item.quantity,
+              minStock: product.minStock,
+            },
+          })
+        }
+
+        // Increment Product.stock (total)
+        const updatedProduct = await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              increment: item.quantity,
+            },
+          },
+        })
+
+        // Create InventoryMovement with COMPRA type and toWarehouseId
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,
             type: 'COMPRA',
             quantity: item.quantity,
-            previousStock,
-            newStock,
+            previousStock: product.stock,
+            newStock: updatedProduct.stock,
+            toWarehouseId: whId,
             reason: `Compra ${newPurchase.id.slice(-8)}`,
             referenceId: newPurchase.id,
           },

@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || ''
     const categoryId = searchParams.get('categoryId') || ''
     const active = searchParams.get('active')
+    const warehouseId = searchParams.get('warehouseId') || ''
 
     const where: Record<string, unknown> = {}
 
@@ -26,15 +27,50 @@ export async function GET(request: Request) {
       where.isActive = active === 'true'
     }
 
+    // If warehouseId is specified, filter products that have stock in that warehouse
+    if (warehouseId) {
+      where.stocks = {
+        some: { warehouseId },
+      }
+    }
+
     const products = await db.product.findMany({
       where,
       include: {
         category: true,
+        stocks: {
+          include: {
+            warehouse: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                type: true,
+              },
+            },
+          },
+          orderBy: { warehouse: { name: 'asc' } },
+        },
       },
       orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json(products)
+    // If warehouseId is specified, add a warehouseStock field for convenience
+    let result = products
+    if (warehouseId) {
+      result = products.map((product) => {
+        const warehouseStockEntry = product.stocks.find(
+          (s) => s.warehouseId === warehouseId
+        )
+        return {
+          ...product,
+          warehouseStock: warehouseStockEntry?.stock ?? 0,
+          warehouseMinStock: warehouseStockEntry?.minStock ?? 5,
+        }
+      })
+    }
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching products:', error)
     return NextResponse.json(
@@ -57,6 +93,7 @@ export async function POST(request: Request) {
       stock,
       minStock,
       unit,
+      image,
     } = body
 
     if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
@@ -99,12 +136,25 @@ export async function POST(request: Request) {
           categoryId: categoryId || null,
           costPrice: parseFloat(costPrice),
           salePrice: parseFloat(salePrice),
+          image: image || null,
           stock: initialStock,
           minStock: minStock ?? 5,
           unit: unit || 'unidad',
         },
         include: {
           category: true,
+          stocks: {
+            include: {
+              warehouse: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  type: true,
+                },
+              },
+            },
+          },
         },
       })
 

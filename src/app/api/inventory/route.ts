@@ -18,6 +18,22 @@ export async function GET(request: Request) {
         where,
         include: {
           product: true,
+          fromWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              type: true,
+            },
+          },
+          toWarehouse: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              type: true,
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

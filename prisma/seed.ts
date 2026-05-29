@@ -3,6 +3,29 @@ import { db } from '@/lib/db'
 async function seed() {
   console.log('🌱 Seeding database...')
 
+  // Create warehouses
+  const warehousePrincipal = await db.warehouse.create({
+    data: {
+      name: 'Depósito Principal',
+      code: 'PRINCIPAL',
+      type: 'PRINCIPAL',
+      address: 'Depósito principal de stock',
+      isActive: true,
+    },
+  })
+
+  const warehouseVentas = await db.warehouse.create({
+    data: {
+      name: 'Local de Ventas',
+      code: 'VENTAS',
+      type: 'VENTAS',
+      address: 'Local de atención al público',
+      isActive: true,
+    },
+  })
+
+  console.log('  - 2 almacenes creados (Principal y Ventas)')
+
   // Create categories
   const bebidas = await db.category.create({ data: { name: 'Bebidas', description: 'Gaseosas, jugos, agua' } })
   const snacks = await db.category.create({ data: { name: 'Snacks', description: 'Papas, galletas, caramelos' } })
@@ -11,7 +34,7 @@ async function seed() {
   const otros = await db.category.create({ data: { name: 'Otros', description: 'Varios y artículos varios' } })
 
   // Create products
-  const products = [
+  const productsData = [
     { name: 'Coca-Cola 500ml', barcode: '7790866001234', costPrice: 450, salePrice: 700, stock: 24, minStock: 6, unit: 'unidad', categoryId: bebidas.id },
     { name: 'Pepsi 500ml', barcode: '7790866001235', costPrice: 420, salePrice: 650, stock: 18, minStock: 6, unit: 'unidad', categoryId: bebidas.id },
     { name: 'Agua Mineral 500ml', barcode: '7790866001236', costPrice: 200, salePrice: 350, stock: 30, minStock: 10, unit: 'unidad', categoryId: bebidas.id },
@@ -31,17 +54,55 @@ async function seed() {
     { name: 'Funda Celular Universal', costPrice: 800, salePrice: 1500, stock: 4, minStock: 2, unit: 'unidad', categoryId: otros.id },
   ]
 
-  for (const p of products) {
-    const product = await db.product.create({ data: p })
-    if (p.stock > 0) {
+  for (const p of productsData) {
+    const totalStock = p.stock
+    // Distribute stock: 60% to Principal, 40% to Ventas
+    const principalStock = Math.ceil(totalStock * 0.6)
+    const ventasStock = totalStock - principalStock
+
+    const product = await db.product.create({
+      data: {
+        name: p.name,
+        barcode: p.barcode,
+        costPrice: p.costPrice,
+        salePrice: p.salePrice,
+        stock: totalStock,
+        minStock: p.minStock,
+        unit: p.unit,
+        categoryId: p.categoryId,
+      },
+    })
+
+    // Create ProductStock entries for both warehouses
+    await db.productStock.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehousePrincipal.id,
+        stock: principalStock,
+        minStock: p.minStock,
+      },
+    })
+
+    await db.productStock.create({
+      data: {
+        productId: product.id,
+        warehouseId: warehouseVentas.id,
+        stock: ventasStock,
+        minStock: p.minStock,
+      },
+    })
+
+    // Create initial inventory movement
+    if (totalStock > 0) {
       await db.inventoryMovement.create({
         data: {
           productId: product.id,
           type: 'ENTRADA',
-          quantity: p.stock,
+          quantity: totalStock,
           previousStock: 0,
-          newStock: p.stock,
+          newStock: totalStock,
           reason: 'Stock inicial',
+          toWarehouseId: warehousePrincipal.id,
         },
       })
     }
@@ -53,8 +114,9 @@ async function seed() {
   await db.supplier.create({ data: { name: 'Nobleza Piccardo', phone: '0800-888-8765', address: 'Av. del Libertador 3456' } })
 
   console.log('✅ Seed completed!')
+  console.log(`  - 2 almacenes creados`)
   console.log(`  - ${5} categorías creadas`)
-  console.log(`  - ${products.length} productos creados`)
+  console.log(`  - ${productsData.length} productos creados (con stock por almacén)`)
   console.log(`  - 3 proveedores creados`)
 }
 

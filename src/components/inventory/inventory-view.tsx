@@ -45,18 +45,35 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ArrowRightLeft,
+  Warehouse as WarehouseIcon,
+  Expand,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
 import { ProductFormDialog } from './product-form-dialog'
 import { CategoryFormDialog } from './category-form-dialog'
 import { MovementTable } from './movement-table'
+import { WarehouseView } from './warehouse-view'
+import { StockTransferDialog } from './stock-transfer-dialog'
 
 interface Category {
   id: string
   name: string
   description?: string | null
   productCount: number
+}
+
+interface ProductStock {
+  warehouseId: string
+  warehouse: {
+    id: string
+    name: string
+    code: string
+    type: string
+  }
+  stock: number
+  minStock: number
 }
 
 interface Product {
@@ -72,6 +89,8 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  image?: string | null
+  stocks?: ProductStock[]
 }
 
 const PAGE_SIZE = 10
@@ -95,6 +114,10 @@ export function InventoryView() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
   const [deleteCategoryConfirmOpen, setDeleteCategoryConfirmOpen] = useState(false)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false)
+
+  // Stock expansion
+  const [expandedStock, setExpandedStock] = useState<string | null>(null)
 
   // Categories collapsible
   const [categoriesOpen, setCategoriesOpen] = useState(false)
@@ -237,6 +260,10 @@ export function InventoryView() {
             <ChevronDown className="h-4 w-4" />
             Movimientos
           </TabsTrigger>
+          <TabsTrigger value="warehouses" className="gap-1.5">
+            <WarehouseIcon className="h-4 w-4" />
+            Almacenes
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="space-y-4">
@@ -264,7 +291,7 @@ export function InventoryView() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 onClick={() => {
                   setEditingProduct(null)
@@ -274,6 +301,14 @@ export function InventoryView() {
               >
                 <Plus className="h-4 w-4" />
                 Nuevo Producto
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setTransferDialogOpen(true)}
+                className="gap-1.5"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Transferir Stock
               </Button>
               <Button
                 variant="outline"
@@ -294,6 +329,7 @@ export function InventoryView() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead
                     className="cursor-pointer select-none"
                     onClick={() => toggleSort('name')}
@@ -331,78 +367,148 @@ export function InventoryView() {
               <TableBody>
                 {productsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       Cargando productos...
                     </TableCell>
                   </TableRow>
                 ) : paginatedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       No se encontraron productos
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedProducts.map((product) => (
-                    <TableRow key={product.id} className={!product.isActive ? 'opacity-60' : ''}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {product.barcode || product.sku || '—'}
-                      </TableCell>
-                      <TableCell>
-                        {product.category ? (
-                          <Badge variant="secondary" className="text-xs">
-                            {product.category.name}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">{formatCurrency(product.costPrice)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(product.salePrice)}</TableCell>
-                      <TableCell className={`text-right ${getStockColor(product.stock, product.minStock)}`}>
-                        {product.stock}
-                        {product.stock < product.minStock && product.stock > 0 && (
-                          <span className="ml-1 text-xs">⚠</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.isActive ? (
-                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100">
-                            Activo
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100">
-                            Inactivo
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingProduct(product)
-                              setProductDialogOpen(true)
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {product.isActive && (
+                    <>
+                      <TableRow
+                        key={product.id}
+                        className={`cursor-pointer ${!product.isActive ? 'opacity-60' : ''}`}
+                        onClick={() => setExpandedStock(expandedStock === product.id ? null : product.id)}
+                      >
+                        {/* Image thumbnail */}
+                        <TableCell>
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-10 h-10 rounded-md object-cover border"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                              <Package className="h-5 w-5 text-muted-foreground/40" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-1.5">
+                            {product.name}
+                            {product.stocks && product.stocks.length > 1 && (
+                              <Expand className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {product.barcode || product.sku || '—'}
+                        </TableCell>
+                        <TableCell>
+                          {product.category ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {product.category.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">{formatCurrency(product.costPrice)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(product.salePrice)}</TableCell>
+                        <TableCell className={`text-right ${getStockColor(product.stock, product.minStock)}`}>
+                          <div className="flex items-center justify-end gap-1">
+                            {product.stock}
+                            {product.stock < product.minStock && product.stock > 0 && (
+                              <span className="text-xs">⚠</span>
+                            )}
+                            {product.stocks && product.stocks.length > 1 && (
+                              <ChevronDown
+                                className={`h-3.5 w-3.5 transition-transform ${
+                                  expandedStock === product.id ? 'rotate-180' : ''
+                                }`}
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {product.isActive ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100">
+                              Activo
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100">
+                              Inactivo
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                setDeletingProduct(product)
-                                setDeleteConfirmOpen(true)
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingProduct(product)
+                                setProductDialogOpen(true)
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Edit className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                            {product.isActive && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeletingProduct(product)
+                                  setDeleteConfirmOpen(true)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {/* Expanded stock breakdown */}
+                      {expandedStock === product.id && product.stocks && product.stocks.length > 1 && (
+                        <TableRow key={`${product.id}-stock`}>
+                          <TableCell colSpan={9} className="bg-slate-50 dark:bg-slate-900/30 p-0">
+                            <div className="p-3 px-6">
+                              <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                                Stock por depósito
+                              </p>
+                              <div className="flex flex-wrap gap-3">
+                                {product.stocks.map((s) => (
+                                  <div
+                                    key={s.warehouseId}
+                                    className="flex items-center gap-2 rounded-lg border bg-white dark:bg-slate-950 px-3 py-2"
+                                  >
+                                    <WarehouseIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                    <span className="text-xs text-muted-foreground">{s.warehouse.name}:</span>
+                                    <span className={`text-sm font-semibold ${
+                                      s.stock === 0
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : s.stock <= s.minStock
+                                          ? 'text-yellow-600 dark:text-yellow-400'
+                                          : 'text-emerald-600 dark:text-emerald-400'
+                                    }`}>
+                                      {s.stock}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))
                 )}
               </TableBody>
@@ -513,6 +619,10 @@ export function InventoryView() {
         <TabsContent value="movements">
           <MovementTable />
         </TabsContent>
+
+        <TabsContent value="warehouses">
+          <WarehouseView />
+        </TabsContent>
       </Tabs>
 
       {/* Product Form Dialog */}
@@ -528,6 +638,12 @@ export function InventoryView() {
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         category={editingCategory}
+      />
+
+      {/* Stock Transfer Dialog */}
+      <StockTransferDialog
+        open={transferDialogOpen}
+        onOpenChange={setTransferDialogOpen}
       />
 
       {/* Delete Product Confirmation */}

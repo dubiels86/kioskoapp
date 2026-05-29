@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Plus, Search, Trash2 } from 'lucide-react'
+import { Plus, Search, Trash2, Warehouse } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
 
@@ -52,6 +52,14 @@ interface Supplier {
   name: string
 }
 
+interface WarehouseItem {
+  id: string
+  name: string
+  code: string
+  type: string
+  isActive: boolean
+}
+
 interface PurchaseItem {
   productId: string
   productName: string
@@ -69,6 +77,7 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
 
   // Form state
   const [supplierId, setSupplierId] = useState('')
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null)
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<PurchaseItem[]>([])
@@ -95,6 +104,24 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
     },
   })
 
+  // Fetch warehouses
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const res = await fetch('/api/warehouses')
+      if (!res.ok) throw new Error('Error al obtener depósitos')
+      return res.json() as Promise<WarehouseItem[]>
+    },
+  })
+
+  // Compute effective warehouse ID: user selection > PRINCIPAL default > first warehouse
+  const defaultWarehouseId = useMemo(() => {
+    const principal = warehouses.find((w) => w.type === 'PRINCIPAL')
+    return principal?.id ?? warehouses[0]?.id ?? null
+  }, [warehouses])
+
+  const warehouseId = selectedWarehouseId ?? defaultWarehouseId ?? ''
+
   // Filtered products for search dropdown
   const searchResults = useMemo(() => {
     if (!productSearch.trim()) return []
@@ -111,6 +138,8 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
   }, [productSearch, products, items])
 
   const total = items.reduce((sum, item) => sum + item.quantity * item.costPrice, 0)
+
+  const selectedWarehouse = warehouses.find((w) => w.id === warehouseId)
 
   const addProduct = (product: Product) => {
     if (items.find((i) => i.productId === product.id)) {
@@ -150,10 +179,16 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
       return
     }
 
+    if (!warehouseId) {
+      toast.error('Selecciona un depósito para recibir los productos')
+      return
+    }
+
     setSaving(true)
     try {
       const body = {
         supplierId: supplierId === 'none' ? undefined : supplierId || undefined,
+        warehouseId,
         invoiceNumber: invoiceNumber.trim() || undefined,
         notes: notes.trim() || undefined,
         items: items.map((item) => ({
@@ -232,6 +267,32 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
               />
             </div>
           </div>
+
+          {/* Warehouse selector */}
+          <div className="grid gap-2">
+            <Label className="flex items-center gap-2">
+              <Warehouse className="h-4 w-4" />
+              Depósito de Recepción
+            </Label>
+            <Select value={warehouseId} onValueChange={setSelectedWarehouseId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar depósito..." />
+              </SelectTrigger>
+              <SelectContent>
+                {warehouses.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedWarehouse && (
+              <p className="text-sm text-muted-foreground">
+                Los productos se recibirán en: <span className="font-medium text-foreground">{selectedWarehouse.name}</span>
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="purchase-notes">Notas</Label>
             <Textarea

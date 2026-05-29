@@ -6,22 +6,41 @@ export type PurchaseStatus = 'PENDIENTE' | 'RECIBIDA' | 'CANCELADA';
 
 export type RepairStatus = 'RECIBIDO' | 'EN_REPARACION' | 'ESPERANDO_REPUESTOS' | 'REPARADO' | 'ENTREGADO' | 'CANCELADO';
 
-export type MovementType = 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'COMPRA' | 'VENTA' | 'MERMA';
+export type MovementType = 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'COMPRA' | 'VENTA' | 'MERMA' | 'TRANSFERENCIA';
 
 export type CashMovementType = 'ENTRADA' | 'SALIDA';
 
+export type WarehouseType = 'PRINCIPAL' | 'VENTAS' | 'SECUNDARIO';
+
 export type AppView = 'pos' | 'inventory' | 'purchases' | 'cash' | 'repairs' | 'reports';
+
+export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
+  PRINCIPAL: 'Depósito Principal',
+  VENTAS: 'Local de Ventas',
+  SECUNDARIO: 'Secundario',
+};
+
+export interface Warehouse {
+  id: string;
+  name: string;
+  code: string;
+  type: WarehouseType;
+  address?: string | null;
+  isActive: boolean;
+}
 
 export interface CartItem {
   productId: string;
   productName: string;
   barcode?: string;
+  image?: string | null;
   quantity: number;
   costPrice: number;
   salePrice: number;
   subtotal: number;
   costSubtotal: number;
-  stock: number;
+  stock: number; // stock in the selected warehouse
+  warehouseId: string;
 }
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
@@ -52,4 +71,5 @@ export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   COMPRA: 'Compra',
   VENTA: 'Venta',
   MERMA: 'Merma',
+  TRANSFERENCIA: 'Transferencia',
 };

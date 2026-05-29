@@ -11,11 +11,30 @@ import { PaymentDialog } from '@/components/pos/payment-dialog'
 import { ReceiptDialog } from '@/components/pos/receipt-dialog'
 import { Button } from '@/components/ui/button'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Lock,
   Unlock,
+  Warehouse,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import type { WarehouseType } from '@/lib/types'
 
 interface CashRegisterData {
   id: string
@@ -59,6 +78,20 @@ interface MovementData {
   createdAt: string
 }
 
+interface WarehouseData {
+  id: string
+  name: string
+  code: string
+  type: WarehouseType
+  address?: string | null
+  isActive: boolean
+  stockSummary: {
+    totalStock: number
+    totalProducts: number
+    lowStockCount: number
+  }
+}
+
 export function POSView() {
   const {
     cart,
@@ -67,6 +100,8 @@ export function POSView() {
     currentCashRegisterId,
     setCurrentCashRegisterId,
     cartSubtotal,
+    selectedWarehouseId,
+    setSelectedWarehouseId,
   } = useAppStore()
 
   const queryClient = useQueryClient()
@@ -77,6 +112,31 @@ export function POSView() {
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false)
   const [lastSale, setLastSale] = useState<SaleData | null>(null)
   const [discount, setDiscount] = useState(0)
+  const [warehouseChangeDialogOpen, setWarehouseChangeDialogOpen] = useState(false)
+  const [pendingWarehouseId, setPendingWarehouseId] = useState<string | null>(null)
+
+  // Fetch warehouses
+  const { data: warehouses = [] } = useQuery<WarehouseData[]>({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const res = await fetch('/api/warehouses')
+      if (!res.ok) throw new Error('Error cargando depósitos')
+      return res.json()
+    },
+  })
+
+  // Auto-select VENTAS warehouse on mount if none selected
+  useEffect(() => {
+    if (!selectedWarehouseId && warehouses.length > 0) {
+      const ventasWarehouse = warehouses.find((w) => w.type === 'VENTAS')
+      if (ventasWarehouse) {
+        setSelectedWarehouseId(ventasWarehouse.id)
+      } else {
+        // Fallback to first active warehouse
+        setSelectedWarehouseId(warehouses[0].id)
+      }
+    }
+  }, [warehouses, selectedWarehouseId, setSelectedWarehouseId])
 
   // Fetch current cash register
   const { data: cashRegister } = useQuery<CashRegisterData | null>({
@@ -98,6 +158,42 @@ export function POSView() {
     }
   }, [cashRegister, setCurrentCashRegisterId])
 
+  // Handle warehouse change with confirmation if cart has items
+  const handleWarehouseChange = useCallback(
+    (newWarehouseId: string) => {
+      if (newWarehouseId === selectedWarehouseId) return
+
+      if (cart.length > 0) {
+        // Show confirmation dialog
+        setPendingWarehouseId(newWarehouseId)
+        setWarehouseChangeDialogOpen(true)
+      } else {
+        setSelectedWarehouseId(newWarehouseId)
+        queryClient.invalidateQueries({ queryKey: ['products'] })
+      }
+    },
+    [cart, selectedWarehouseId, setSelectedWarehouseId, queryClient]
+  )
+
+  // Confirm warehouse change (clear cart)
+  const confirmWarehouseChange = useCallback(() => {
+    if (pendingWarehouseId) {
+      clearCart()
+      setSelectedWarehouseId(pendingWarehouseId)
+      setDiscount(0)
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success('Almacén cambiado y carrito limpiado')
+    }
+    setPendingWarehouseId(null)
+    setWarehouseChangeDialogOpen(false)
+  }, [pendingWarehouseId, clearCart, setSelectedWarehouseId, queryClient])
+
+  // Cancel warehouse change
+  const cancelWarehouseChange = useCallback(() => {
+    setPendingWarehouseId(null)
+    setWarehouseChangeDialogOpen(false)
+  }, [])
+
   // Process sale mutation
   const processSaleMutation = useMutation({
     mutationFn: async () => {
@@ -106,6 +202,9 @@ export function POSView() {
       }
       if (cart.length === 0) {
         throw new Error('El carrito está vacío')
+      }
+      if (!selectedWarehouseId) {
+        throw new Error('Seleccioná un almacén para vender')
       }
 
       const subtotal = cartSubtotal()
@@ -120,6 +219,7 @@ export function POSView() {
           cashRegisterId: currentCashRegisterId,
           paymentMethod: selectedPaymentMethod,
           discount,
+          warehouseId: selectedWarehouseId,
           items: cart.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -157,20 +257,55 @@ export function POSView() {
       return
     }
     if (cart.length === 0) return
+    if (!selectedWarehouseId) {
+      toast.error('Seleccioná un almacén para vender')
+      return
+    }
     setPaymentDialogOpen(true)
   }
+
+  const selectedWarehouse = warehouses.find((w) => w.id === selectedWarehouseId)
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 h-full p-4 lg:p-5">
       {/* Left Side - Product Selection */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <ProductGrid />
+        <ProductGrid warehouseId={selectedWarehouseId} />
       </div>
 
       {/* Right Side - Cart & Payment */}
       <div className="w-full lg:w-[380px] xl:w-[400px] shrink-0 flex flex-col min-h-0">
-        {/* Cash Register Status Bar */}
-        <div className="mb-3 shrink-0">
+        {/* Warehouse & Cash Register Status Bar */}
+        <div className="mb-3 shrink-0 space-y-2">
+          {/* Warehouse Selector */}
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800">
+            <Warehouse className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
+            <span className="text-sm font-semibold text-violet-700 dark:text-violet-300 shrink-0">
+              Almacén:
+            </span>
+            <Select
+              value={selectedWarehouseId || undefined}
+              onValueChange={handleWarehouseChange}
+            >
+              <SelectTrigger className="h-8 flex-1 border-violet-200 dark:border-violet-700 bg-white dark:bg-slate-900 text-sm">
+                <SelectValue placeholder="Seleccionar almacén" />
+              </SelectTrigger>
+              <SelectContent>
+                {warehouses.map((warehouse) => (
+                  <SelectItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedWarehouse && (
+              <span className="text-xs text-violet-500 dark:text-violet-400 shrink-0 hidden sm:inline">
+                ({selectedWarehouse.type === 'VENTAS' ? 'Ventas' : selectedWarehouse.type === 'PRINCIPAL' ? 'Principal' : 'Secundario'})
+              </span>
+            )}
+          </div>
+
+          {/* Cash Register Status */}
           <div
             className={`flex items-center justify-between px-4 py-2.5 rounded-xl border ${
               isOpen
@@ -257,6 +392,27 @@ export function POSView() {
         onOpenChange={setReceiptDialogOpen}
         sale={lastSale}
       />
+
+      {/* Warehouse Change Confirmation Dialog */}
+      <AlertDialog open={warehouseChangeDialogOpen} onOpenChange={setWarehouseChangeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cambiar almacén</AlertDialogTitle>
+            <AlertDialogDescription>
+              Al cambiar de almacén se limpiará el carrito actual con todos los productos agregados.
+              ¿Desea continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelWarehouseChange}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmWarehouseChange}>
+              Sí, cambiar almacén
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

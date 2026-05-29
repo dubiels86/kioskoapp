@@ -28,6 +28,10 @@ interface AppState {
   // Cash Register state
   currentCashRegisterId: string | null;
   setCurrentCashRegisterId: (id: string | null) => void;
+
+  // Warehouse
+  selectedWarehouseId: string | null;
+  setSelectedWarehouseId: (id: string | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -39,13 +43,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   cart: [],
   addToCart: (item) => {
     const { cart } = get();
-    const existing = cart.find((i) => i.productId === item.productId);
+    const existing = cart.find(
+      (i) => i.productId === item.productId && i.warehouseId === item.warehouseId
+    );
     if (existing) {
       const newQty = existing.quantity + item.quantity;
       if (newQty > item.stock) return; // No superar stock
       set({
         cart: cart.map((i) =>
-          i.productId === item.productId
+          i.productId === item.productId && i.warehouseId === item.warehouseId
             ? {
                 ...i,
                 quantity: newQty,
@@ -98,4 +104,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Cash Register
   currentCashRegisterId: null,
   setCurrentCashRegisterId: (id) => set({ currentCashRegisterId: id }),
+
+  // Warehouse
+  selectedWarehouseId: null,
+  setSelectedWarehouseId: (id) => set({ selectedWarehouseId: id }),
 }));

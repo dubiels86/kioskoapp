@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Package } from 'lucide-react'
+import { Search, Package, ImageIcon } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 
 interface Product {
   id: string
@@ -32,6 +33,9 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  image?: string | null
+  warehouseStock?: number
+  warehouseMinStock?: number
 }
 
 interface Category {
@@ -40,7 +44,11 @@ interface Category {
   productCount: number
 }
 
-export function ProductGrid() {
+interface ProductGridProps {
+  warehouseId: string | null
+}
+
+export function ProductGrid({ warehouseId }: ProductGridProps) {
   const {
     posSearch,
     setPosSearch,
@@ -71,9 +79,9 @@ export function ProductGrid() {
     },
   })
 
-  // Fetch products
+  // Fetch products with warehouse context
   const { data: products = [], isLoading } = useQuery<Product[]>({
-    queryKey: ['products', debouncedSearch, posCategoryFilter],
+    queryKey: ['products', debouncedSearch, posCategoryFilter, warehouseId],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (debouncedSearch) params.set('search', debouncedSearch)
@@ -81,29 +89,41 @@ export function ProductGrid() {
         params.set('categoryId', posCategoryFilter)
       }
       params.set('active', 'true')
+      if (warehouseId) {
+        params.set('warehouseId', warehouseId)
+      }
       const res = await fetch(`/api/products?${params.toString()}`)
       if (!res.ok) throw new Error('Error cargando productos')
       return res.json()
     },
+    enabled: !!warehouseId,
   })
 
   const handleAddToCart = useCallback(
     (product: Product) => {
-      if (product.stock <= 0) return
+      if (!warehouseId) return
+      // Use warehouseStock if available, otherwise fall back to total stock
+      const availableStock = warehouseId && product.warehouseStock !== undefined
+        ? product.warehouseStock
+        : product.stock
+      if (availableStock <= 0) return
+
       const cartItem: CartItem = {
         productId: product.id,
         productName: product.name,
         barcode: product.barcode || undefined,
+        image: product.image || undefined,
         quantity: 1,
         costPrice: product.costPrice,
         salePrice: product.salePrice,
         subtotal: product.salePrice,
         costSubtotal: product.costPrice,
-        stock: product.stock,
+        stock: availableStock,
+        warehouseId: warehouseId,
       }
       addToCart(cartItem)
     },
-    [addToCart]
+    [addToCart, warehouseId]
   )
 
   return (
@@ -137,56 +157,79 @@ export function ProductGrid() {
         </Select>
       </div>
 
-      {/* Product Grid */}
-      <ScrollArea className="flex-1 -mx-1">
-        <div className="px-1">
-          {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <ProductCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-              <Package className="w-12 h-12 mb-3 opacity-40" />
-              <p className="text-lg font-medium">No se encontraron productos</p>
-              <p className="text-sm mt-1">
-                Intentá con otra búsqueda o categoría
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-              {products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAdd={handleAddToCart}
-                />
-              ))}
-            </div>
-          )}
+      {/* No warehouse selected message */}
+      {!warehouseId && (
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+          <Package className="w-12 h-12 mb-3 opacity-40" />
+          <p className="text-lg font-medium">Seleccioná un almacén</p>
+          <p className="text-sm mt-1">
+            Elegí un almacén en la parte superior para ver los productos disponibles
+          </p>
         </div>
-      </ScrollArea>
+      )}
+
+      {/* Product Grid */}
+      {warehouseId && (
+        <ScrollArea className="flex-1 -mx-1">
+          <div className="px-1">
+            {isLoading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+                <Package className="w-12 h-12 mb-3 opacity-40" />
+                <p className="text-lg font-medium">No se encontraron productos</p>
+                <p className="text-sm mt-1">
+                  Intentá con otra búsqueda o categoría
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                {products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    warehouseId={warehouseId}
+                    onAdd={handleAddToCart}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   )
 }
 
 function ProductCard({
   product,
+  warehouseId,
   onAdd,
 }: {
   product: Product
+  warehouseId: string | null
   onAdd: (product: Product) => void
 }) {
-  const isOutOfStock = product.stock <= 0
-  const isLowStock = !isOutOfStock && product.stock <= product.minStock
+  // Use warehouse-specific stock when available
+  const displayStock = warehouseId && product.warehouseStock !== undefined
+    ? product.warehouseStock
+    : product.stock
+  const displayMinStock = warehouseId && product.warehouseMinStock !== undefined
+    ? product.warehouseMinStock
+    : product.minStock
+  const isOutOfStock = displayStock <= 0
+  const isLowStock = !isOutOfStock && displayStock <= displayMinStock
 
   return (
     <button
       onClick={() => onAdd(product)}
       disabled={isOutOfStock}
       className={`
-        group relative flex flex-col items-start p-4 rounded-xl border transition-all duration-150 text-left
+        group relative flex flex-col items-start p-3 rounded-xl border transition-all duration-150 text-left
         ${
           isOutOfStock
             ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
@@ -219,13 +262,31 @@ function ProductCard({
         )}
       </div>
 
-      {/* Product Name */}
-      <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-tight mb-1 line-clamp-2">
-        {product.name}
-      </h3>
+      {/* Product Image & Name */}
+      <div className="flex items-start gap-2.5 w-full mb-1">
+        {/* Product Image Thumbnail */}
+        <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={product.name}
+              width={48}
+              height={48}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
+          ) : (
+            <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+          )}
+        </div>
+
+        <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-tight line-clamp-2 flex-1">
+          {product.name}
+        </h3>
+      </div>
 
       {/* Price */}
-      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-auto">
+      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-auto ml-0">
         {formatCurrency(product.salePrice)}
       </p>
 
@@ -241,7 +302,9 @@ function ProductCard({
           }`}
         />
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {isOutOfStock ? 'Sin stock' : `${product.stock} ${product.stock === 1 ? product.unit : product.unit + 's'}`}
+          {isOutOfStock
+            ? 'Sin stock'
+            : `${displayStock} ${displayStock === 1 ? product.unit : product.unit + 's'}`}
         </span>
       </div>
     </button>
@@ -250,11 +313,16 @@ function ProductCard({
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+    <div className="flex flex-col p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
       <Skeleton className="h-5 w-16 mb-2" />
-      <Skeleton className="h-4 w-full mb-1" />
-      <Skeleton className="h-4 w-2/3 mb-3" />
-      <Skeleton className="h-7 w-24 mb-2" />
+      <div className="flex items-start gap-2.5 mb-1">
+        <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-full mb-1" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+      <Skeleton className="h-7 w-24 mb-2 mt-2" />
       <Skeleton className="h-3 w-20" />
     </div>
   )

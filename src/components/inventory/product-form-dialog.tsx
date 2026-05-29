@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ImagePlus, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -39,6 +40,7 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  image?: string | null
 }
 
 interface ProductFormDialogProps {
@@ -58,6 +60,7 @@ const UNITS = [
 export function ProductFormDialog({ open, onOpenChange, product, categories }: ProductFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!product
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
   const [barcode, setBarcode] = useState('')
@@ -68,6 +71,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const [stock, setStock] = useState('')
   const [minStock, setMinStock] = useState('')
   const [unit, setUnit] = useState('unidad')
+  const [image, setImage] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -81,6 +85,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setStock(String(product.stock))
       setMinStock(String(product.minStock))
       setUnit(product.unit)
+      setImage(product.image || null)
     } else {
       setName('')
       setBarcode('')
@@ -91,8 +96,41 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setStock('')
       setMinStock('5')
       setUnit('unidad')
+      setImage(null)
     }
   }, [product, open])
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten archivos de imagen')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('La imagen no puede superar los 2MB')
+      return
+    }
+
+    // Convert to base64 data URL
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const result = event.target?.result as string
+      setImage(result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeImage = () => {
+    setImage(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -120,10 +158,11 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
         stock: stock ? parseInt(stock) : undefined,
         minStock: minStock ? parseInt(minStock) : undefined,
         unit,
+        image: image || undefined,
       }
 
       if (isEditing) {
-        const res = await fetch(`/api/products/${product.id}`, {
+        const res = await fetch(`/api/products/${product!.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -166,6 +205,70 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
         </DialogHeader>
 
         <div className="grid gap-4 py-4">
+          {/* Image upload */}
+          <div className="grid gap-2">
+            <Label>Imagen del producto</Label>
+            <div className="flex items-start gap-4">
+              {image ? (
+                <div className="relative group">
+                  <img
+                    src={image}
+                    alt="Vista previa"
+                    className="w-20 h-20 rounded-lg object-cover border"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="w-20 h-20 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <ImagePlus className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+              )}
+              <div className="flex-1 space-y-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="gap-1.5"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  {image ? 'Cambiar imagen' : 'Subir imagen'}
+                </Button>
+                {image && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeImage}
+                    className="gap-1.5 text-red-500 hover:text-red-600"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Eliminar
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  JPG, PNG o WebP. Máximo 2MB.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid gap-2">
             <Label htmlFor="name">Nombre *</Label>
             <Input

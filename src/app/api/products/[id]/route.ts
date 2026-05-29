@@ -11,6 +11,19 @@ export async function GET(
       where: { id },
       include: {
         category: true,
+        stocks: {
+          include: {
+            warehouse: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                type: true,
+              },
+            },
+          },
+          orderBy: { warehouse: { name: 'asc' } },
+        },
       },
     })
 
@@ -49,6 +62,7 @@ export async function PUT(
       minStock,
       unit,
       isActive,
+      image,
     } = body
 
     const existingProduct = await db.product.findUnique({ where: { id } })
@@ -111,12 +125,26 @@ export async function PUT(
       if (minStock !== undefined) updateData.minStock = minStock
       if (unit !== undefined) updateData.unit = unit
       if (isActive !== undefined) updateData.isActive = isActive
+      if (image !== undefined) updateData.image = image || null
 
       const updated = await tx.product.update({
         where: { id },
         data: updateData,
         include: {
           category: true,
+          stocks: {
+            include: {
+              warehouse: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  type: true,
+                },
+              },
+            },
+            orderBy: { warehouse: { name: 'asc' } },
+          },
         },
       })
 

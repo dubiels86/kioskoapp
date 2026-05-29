@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import type { MovementType } from '@/lib/types'
 import { MOVEMENT_TYPE_LABELS } from '@/lib/types'
@@ -38,6 +38,18 @@ interface InventoryMovement {
     id: string
     name: string
   }
+  fromWarehouse?: {
+    id: string
+    name: string
+    code: string
+    type: string
+  } | null
+  toWarehouse?: {
+    id: string
+    name: string
+    code: string
+    type: string
+  } | null
 }
 
 function getMovementBadgeVariant(type: MovementType) {
@@ -52,12 +64,27 @@ function getMovementBadgeVariant(type: MovementType) {
       return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-100'
     case 'MERMA':
       return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 hover:bg-orange-100'
+    case 'TRANSFERENCIA':
+      return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 hover:bg-teal-100'
     default:
       return ''
   }
 }
 
-const MOVEMENT_TYPES: MovementType[] = ['ENTRADA', 'SALIDA', 'AJUSTE', 'COMPRA', 'VENTA', 'MERMA']
+const MOVEMENT_TYPES: MovementType[] = ['ENTRADA', 'SALIDA', 'AJUSTE', 'COMPRA', 'VENTA', 'MERMA', 'TRANSFERENCIA']
+
+function getWarehouseLabel(movement: InventoryMovement): string | null {
+  if (movement.type === 'TRANSFERENCIA' && movement.fromWarehouse && movement.toWarehouse) {
+    return `${movement.fromWarehouse.name} → ${movement.toWarehouse.name}`
+  }
+  if (movement.toWarehouse) {
+    return `→ ${movement.toWarehouse.name}`
+  }
+  if (movement.fromWarehouse) {
+    return `${movement.fromWarehouse.name} →`
+  }
+  return null
+}
 
 export function MovementTable() {
   const [productSearch, setProductSearch] = useState('')
@@ -120,6 +147,7 @@ export function MovementTable() {
               <TableHead>Fecha</TableHead>
               <TableHead>Producto</TableHead>
               <TableHead>Tipo</TableHead>
+              <TableHead>Depósito</TableHead>
               <TableHead className="text-right">Cantidad</TableHead>
               <TableHead className="text-right">Stock Anterior</TableHead>
               <TableHead className="text-right">Stock Nuevo</TableHead>
@@ -129,13 +157,13 @@ export function MovementTable() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   Cargando movimientos...
                 </TableCell>
               </TableRow>
             ) : filteredMovements.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   No se encontraron movimientos
                 </TableCell>
               </TableRow>
@@ -155,6 +183,25 @@ export function MovementTable() {
                     >
                       {MOVEMENT_TYPE_LABELS[movement.type]}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {movement.type === 'TRANSFERENCIA' && movement.fromWarehouse && movement.toWarehouse ? (
+                      <span className="text-xs flex items-center gap-1 whitespace-nowrap">
+                        <span className="text-muted-foreground">{movement.fromWarehouse.name}</span>
+                        <ArrowRight className="h-3 w-3 text-teal-500 shrink-0" />
+                        <span className="text-muted-foreground">{movement.toWarehouse.name}</span>
+                      </span>
+                    ) : movement.toWarehouse ? (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        → {movement.toWarehouse.name}
+                      </span>
+                    ) : movement.fromWarehouse ? (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {movement.fromWarehouse.name} →
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {movement.type === 'SALIDA' || movement.type === 'VENTA' || movement.type === 'MERMA'

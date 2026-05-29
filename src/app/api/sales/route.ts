@@ -33,6 +33,14 @@ export async function GET(request: Request) {
         items: {
           include: {
             product: true,
+            warehouse: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                type: true,
+              },
+            },
           },
         },
         cashRegister: true,
@@ -60,6 +68,7 @@ export async function POST(request: Request) {
       customerName,
       notes,
       items,
+      warehouseId, // Global warehouse for all items
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -76,6 +85,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validate global warehouseId if provided
+    if (warehouseId) {
+      const warehouse = await db.warehouse.findUnique({ where: { id: warehouseId } })
+      if (!warehouse || !warehouse.isActive) {
+        return NextResponse.json(
+          { error: 'Depósito no encontrado o inactivo' },
+          { status: 400 }
+        )
+      }
+    }
+
     const sale = await db.$transaction(async (tx) => {
       // Get all products for validation
       const productIds = items.map((item: { productId: string }) => item.productId)
@@ -84,14 +104,41 @@ export async function POST(request: Request) {
       })
       const productMap = new Map(products.map((p) => [p.id, p]))
 
-      // Validate stock availability
-      for (const item of items) {
+      // Determine warehouse for each item (item-level overrides global)
+      const itemWarehouses = items.map((item: { productId: string; warehouseId?: string }) => {
+        const whId = item.warehouseId || warehouseId
+        if (!whId) {
+          throw new Error(`No se especificó depósito para el producto ${productMap.get(item.productId)?.name || item.productId}`)
+        }
+        return whId
+      })
+
+      // Validate warehouse stock availability
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
         const product = productMap.get(item.productId)
         if (!product) {
           throw new Error(`Producto no encontrado: ${item.productId}`)
         }
-        if (product.stock < item.quantity) {
-          throw new Error(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}`)
+
+        const whId = itemWarehouses[i]
+        const productStock = await tx.productStock.findUnique({
+          where: {
+            productId_warehouseId: {
+              productId: item.productId,
+              warehouseId: whId,
+            },
+          },
+        })
+
+        if (!productStock) {
+          const warehouse = await tx.warehouse.findUnique({ where: { id: whId } })
+          throw new Error(`No hay stock de ${product.name} en el depósito ${warehouse?.name || whId}`)
+        }
+
+        if (productStock.stock < item.quantity) {
+          const warehouse = await tx.warehouse.findUnique({ where: { id: whId } })
+          throw new Error(`Stock insuficiente de ${product.name} en ${warehouse?.name || whId}. Disponible: ${productStock.stock}`)
         }
       }
 
@@ -100,7 +147,8 @@ export async function POST(request: Request) {
       let costTotal = 0
       const saleItemsData = []
 
-      for (const item of items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
         const product = productMap.get(item.productId)!
         const itemSubtotal = item.quantity * product.salePrice
         const itemCostSubtotal = item.quantity * product.costPrice
@@ -109,6 +157,7 @@ export async function POST(request: Request) {
 
         saleItemsData.push({
           productId: item.productId,
+          warehouseId: itemWarehouses[i],
           quantity: item.quantity,
           costPrice: product.costPrice,
           salePrice: product.salePrice,
@@ -158,30 +207,60 @@ export async function POST(request: Request) {
           items: {
             include: {
               product: true,
+              warehouse: {
+                select: {
+                  id: true,
+                  name: true,
+                  code: true,
+                  type: true,
+                },
+              },
             },
           },
           cashRegister: true,
         },
       })
 
-      // Update stock and create inventory movements
-      for (const item of items) {
+      // Update warehouse stock and total stock for each item
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
         const product = productMap.get(item.productId)!
-        const previousStock = product.stock
-        const newStock = previousStock - item.quantity
+        const whId = itemWarehouses[i]
 
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: newStock },
+        // Decrement ProductStock for the specific warehouse
+        await tx.productStock.update({
+          where: {
+            productId_warehouseId: {
+              productId: item.productId,
+              warehouseId: whId,
+            },
+          },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
         })
 
+        // Decrement Product.stock (total)
+        const updatedProduct = await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        })
+
+        // Create InventoryMovement
         await tx.inventoryMovement.create({
           data: {
             productId: item.productId,
             type: movementType,
             quantity: item.quantity,
-            previousStock,
-            newStock,
+            previousStock: product.stock,
+            newStock: updatedProduct.stock,
+            fromWarehouseId: whId,
             reason: `Venta ${invoiceNumber}`,
             referenceId: newSale.id,
           },
