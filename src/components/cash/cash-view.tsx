@@ -34,6 +34,7 @@ import { CashCloseDialog } from './cash-close-dialog'
 import { formatCurrency, formatTime } from '@/lib/format'
 import { PAYMENT_METHOD_LABELS } from '@/lib/types'
 import type { PaymentMethod } from '@/lib/types'
+import { BillBreakdownDisplay, jsonToBreakdown } from '@/components/cash/bill-breakdown-input'
 
 interface SaleItem {
   id: string
@@ -72,6 +73,8 @@ interface CashRegisterData {
   status: string
   openedAt: string
   closedAt: string | null
+  openingBillBreakdown: string | null
+  closingBillBreakdown: string | null
   sales: Sale[]
   movements: CashMovement[]
 }
@@ -516,6 +519,16 @@ export function CashView() {
         onOpenChange={setMovementDialog}
         cashRegisterId={cashRegister.id}
       />
+      {/* Opening Bill Breakdown */}
+      {cashRegister && cashRegister.openingBillBreakdown && (
+        Object.keys(jsonToBreakdown(cashRegister.openingBillBreakdown)).length > 0 && (
+          <BillBreakdownDisplay
+            breakdown={jsonToBreakdown(cashRegister.openingBillBreakdown)}
+            label="Desglose de Apertura"
+          />
+        )
+      )}
+
       <CashCloseDialog
         open={closeDialog}
         onOpenChange={setCloseDialog}

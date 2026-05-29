@@ -116,16 +116,18 @@ model SaleItem {
 }
 
 model CashRegister {
-  id             String         @id @default(cuid())
-  openingAmount  Float
-  closingAmount  Float?
-  expectedAmount Float?
-  difference     Float?
-  status         String         @default("ABIERTA")
-  openedAt       DateTime       @default(now())
-  closedAt       DateTime?
-  sales          Sale[]
-  movements      CashMovement[]
+  id                    String         @id @default(cuid())
+  openingAmount         Float
+  closingAmount         Float?
+  expectedAmount        Float?
+  difference            Float?
+  status                String         @default("ABIERTA")
+  openedAt              DateTime       @default(now())
+  closedAt              DateTime?
+  openingBillBreakdown  String?        // JSON string with bill denomination counts for opening
+  closingBillBreakdown  String?        // JSON string with bill denomination counts for closing
+  sales                 Sale[]
+  movements             CashMovement[]
 }
 
 model CashMovement {

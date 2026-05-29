@@ -25,3 +25,28 @@ Stage Summary:
 - Seed data loaded for demonstration
 - Lint passes clean
 - Dev server running on port 3000
+
+---
+Task ID: 2
+Agent: Main Orchestrator
+Task: Add bill denomination counting for cash register open/close
+
+Work Log:
+- Added `openingBillBreakdown` and `closingBillBreakdown` String fields to CashRegister Prisma model (stored as JSON)
+- Pushed schema changes to database
+- Created shared BillBreakdownInput component with denomination counting for ARS bills ($20-$10000) and coins ($1-$10)
+- Created BillBreakdownDisplay component for read-only viewing of saved breakdowns
+- Updated CashOpenDialog in both POS and Cash views to support denomination counting with toggle between breakdown and manual input
+- Updated CashCloseDialog in both POS and Cash views to support denomination counting with toggle and display opening breakdown
+- Updated API routes (POST open, POST close, PUT close) to handle and store billBreakdown JSON data
+- Updated CashView to display opening breakdown when register is open
+- Updated ReportsView to show opening/closing breakdowns for each cash register in the daily report
+- Fixed syntax error in reports-view closing parenthesis
+- Lint passes clean
+
+Stage Summary:
+- Bill denomination counting feature fully implemented for both opening and closing cash register
+- Users can toggle between denomination counting (bills + coins) and manual amount entry
+- Opening breakdown is displayed when viewing open register and during close dialog
+- Both opening and closing breakdowns are shown in daily reports
+- All data persisted as JSON in SQLite database

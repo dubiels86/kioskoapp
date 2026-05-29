@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '@/lib/store'
 import { formatCurrency } from '@/lib/format'
+import { BillBreakdownInput, BillBreakdownDisplay, breakdownToJSON, calculateBreakdownTotal, jsonToBreakdown } from '@/components/cash/bill-breakdown-input'
+import type { BillBreakdown } from '@/components/cash/bill-breakdown-input'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,7 @@ interface CashCloseDialogProps {
 interface CashRegisterData {
   id: string
   openingAmount: number
+  openingBillBreakdown: string | null
   sales: SaleData[]
   movements: MovementData[]
 }
@@ -69,11 +72,16 @@ export function CashCloseDialog({
   cashRegisterData,
 }: CashCloseDialogProps) {
   const { setCurrentCashRegisterId } = useAppStore()
-  const [closingAmount, setClosingAmount] = useState<string>('')
+  const [manualClosingAmount, setManualClosingAmount] = useState<string>('')
+  const [billBreakdown, setBillBreakdown] = useState<BillBreakdown>({})
+  const [useBreakdown, setUseBreakdown] = useState(true)
   const queryClient = useQueryClient()
 
+  const breakdownTotal = useMemo(() => calculateBreakdownTotal(billBreakdown), [billBreakdown])
+  const effectiveClosingAmount = useBreakdown ? breakdownTotal : (parseFloat(manualClosingAmount) || 0)
+
   const closeRegisterMutation = useMutation({
-    mutationFn: async (data: { cashRegisterId: string; closingAmount: number }) => {
+    mutationFn: async (data: { cashRegisterId: string; closingAmount: number; billBreakdown: string | null }) => {
       const res = await fetch('/api/cash-register?action=close', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,7 +97,8 @@ export function CashCloseDialog({
       setCurrentCashRegisterId(null)
       queryClient.invalidateQueries({ queryKey: ['cash-register'] })
       toast.success('Caja cerrada correctamente')
-      setClosingAmount('')
+      setManualClosingAmount('')
+      setBillBreakdown({})
       onOpenChange(false)
     },
     onError: (error: Error) => {
@@ -133,30 +142,41 @@ export function CashCloseDialog({
   const expectedAmount =
     openingAmount + efectivoSales + entradaMovements - salidaMovements
 
-  const countedAmount = parseFloat(closingAmount) || 0
-  const difference = countedAmount - expectedAmount
+  const difference = effectiveClosingAmount - expectedAmount
+
+  // Opening breakdown display
+  const openingBreakdown = useMemo(() => jsonToBreakdown(cashRegisterData?.openingBillBreakdown), [cashRegisterData?.openingBillBreakdown])
 
   const handleClose = () => {
-    if (isNaN(countedAmount)) {
+    if (isNaN(effectiveClosingAmount) || effectiveClosingAmount < 0) {
       toast.error('Ingresá un monto válido')
       return
     }
     closeRegisterMutation.mutate({
       cashRegisterId: id,
-      closingAmount: countedAmount,
+      closingAmount: effectiveClosingAmount,
+      billBreakdown: useBreakdown ? breakdownToJSON(billBreakdown) : null,
     })
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setManualClosingAmount('')
+      setBillBreakdown({})
+    }
+    onOpenChange(newOpen)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Banknote className="w-5 h-5 text-emerald-600" />
             Cerrar Caja
           </DialogTitle>
           <DialogDescription>
-            Resumen de la sesión de caja y conteo final.
+            Resumen de la sesión de caja y conteo final por denominación.
           </DialogDescription>
         </DialogHeader>
 
@@ -252,33 +272,73 @@ export function CashCloseDialog({
             </div>
           </section>
 
-          {/* Cash count input */}
+          {/* Opening Breakdown (if available) */}
+          {Object.keys(openingBreakdown).length > 0 && (
+            <BillBreakdownDisplay breakdown={openingBreakdown} label="Desglose de Apertura" />
+          )}
+
+          <Separator />
+
+          {/* Cash count - Bill Breakdown */}
           <section>
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
-              Conteo de Efectivo
+              Conteo de Cierre
             </h3>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                $
-              </span>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={closingAmount}
-                onChange={(e) => setClosingAmount(e.target.value)}
-                placeholder="0.00"
-                className="pl-7 h-12 text-lg font-semibold"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleClose()
-                }}
-              />
+
+            {/* Toggle between breakdown and manual input */}
+            <div className="flex gap-2 mb-3">
+              <Button
+                type="button"
+                size="sm"
+                variant={useBreakdown ? 'default' : 'outline'}
+                onClick={() => setUseBreakdown(true)}
+                className={useBreakdown ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              >
+                Conteo por Denominación
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={!useBreakdown ? 'default' : 'outline'}
+                onClick={() => setUseBreakdown(false)}
+              >
+                Ingreso Manual
+              </Button>
             </div>
+
+            {useBreakdown ? (
+              <BillBreakdownInput
+                value={billBreakdown}
+                onChange={setBillBreakdown}
+                label="Conteo de Efectivo"
+              />
+            ) : (
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold">Monto Contado en Caja</h4>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    $
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={manualClosingAmount}
+                    onChange={(e) => setManualClosingAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="pl-7 h-12 text-lg font-semibold"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleClose()
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Difference */}
-          {closingAmount && !isNaN(countedAmount) && (
+          {effectiveClosingAmount > 0 && (
             <div
               className={`flex items-center justify-between p-3 rounded-xl border ${
                 Math.abs(difference) < 0.01
@@ -312,14 +372,14 @@ export function CashCloseDialog({
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             className="mr-2"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleClose}
-            disabled={closeRegisterMutation.isPending || !closingAmount}
+            disabled={closeRegisterMutation.isPending || effectiveClosingAmount <= 0}
             variant="destructive"
           >
             {closeRegisterMutation.isPending ? (

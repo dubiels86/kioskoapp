@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     // Close cash register action
     if (action === 'close') {
-      const { cashRegisterId, closingAmount } = body
+      const { cashRegisterId, closingAmount, billBreakdown } = body
 
       if (!cashRegisterId) {
         return NextResponse.json(
@@ -110,6 +110,7 @@ export async function POST(request: Request) {
           expectedAmount,
           difference,
           closedAt: new Date(),
+          closingBillBreakdown: billBreakdown || null,
         },
         include: {
           sales: true,
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     }
 
     // Open new cash register
-    const { openingAmount } = body
+    const { openingAmount, billBreakdown } = body
 
     if (openingAmount === undefined || openingAmount === null) {
       return NextResponse.json(
@@ -146,6 +147,7 @@ export async function POST(request: Request) {
       data: {
         openingAmount: parseFloat(openingAmount),
         status: 'ABIERTA',
+        openingBillBreakdown: billBreakdown || null,
       },
       include: {
         sales: true,

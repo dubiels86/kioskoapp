@@ -21,6 +21,8 @@ interface CashRegisterData {
   id: string
   openingAmount: number
   status: string
+  openingBillBreakdown: string | null
+  closingBillBreakdown: string | null
   sales: SaleData[]
   movements: MovementData[]
   openedAt: string

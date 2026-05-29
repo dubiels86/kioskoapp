@@ -34,6 +34,7 @@ import { PAYMENT_METHOD_LABELS } from '@/lib/types'
 import type { PaymentMethod } from '@/lib/types'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { BillBreakdownDisplay, jsonToBreakdown } from '@/components/cash/bill-breakdown-input'
 
 interface SaleItem {
   id: string
@@ -72,7 +73,7 @@ interface DailyReport {
     CUENTA_CASA: { count: number; total: number; costTotal: number }
   }
   cashRegister: {
-    open: { id: string; openingAmount: number; status: string; openedAt: string } | null
+    open: { id: string; openingAmount: number; status: string; openedAt: string; openingBillBreakdown: string | null } | null
     registers: Array<{
       id: string
       openingAmount: number
@@ -81,6 +82,8 @@ interface DailyReport {
       difference: number | null
       openedAt: string
       closedAt: string | null
+      openingBillBreakdown: string | null
+      closingBillBreakdown: string | null
     }>
   }
   sales: Sale[]
@@ -440,7 +443,7 @@ export function ReportsView() {
                 Información de Caja
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -475,6 +478,36 @@ export function ReportsView() {
                   ))}
                 </TableBody>
               </Table>
+
+              {/* Bill Breakdown details for each register */}
+              {report.cashRegister.registers.map((reg) => {
+                const openingBreakdown = jsonToBreakdown(reg.openingBillBreakdown)
+                const closingBreakdown = jsonToBreakdown(reg.closingBillBreakdown)
+                const hasOpening = Object.keys(openingBreakdown).length > 0
+                const hasClosing = Object.keys(closingBreakdown).length > 0
+                if (!hasOpening && !hasClosing) return null
+                return (
+                  <div key={`breakdown-${reg.id}`} className="rounded-lg border p-4 space-y-3">
+                    <h4 className="text-sm font-semibold text-muted-foreground">
+                      Caja del {formatDate(reg.openedAt)}
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {hasOpening && (
+                        <BillBreakdownDisplay
+                          breakdown={openingBreakdown}
+                          label="Desglose de Apertura"
+                        />
+                      )}
+                      {hasClosing && (
+                        <BillBreakdownDisplay
+                          breakdown={closingBreakdown}
+                          label="Desglose de Cierre"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         )}

@@ -71,7 +71,7 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { closingAmount } = body
+    const { closingAmount, billBreakdown } = body
 
     const cashRegister = await db.cashRegister.findUnique({
       where: { id },
@@ -127,6 +127,7 @@ export async function PUT(
         expectedAmount,
         difference,
         closedAt: new Date(),
+        closingBillBreakdown: billBreakdown || null,
       },
       include: {
         sales: true,
