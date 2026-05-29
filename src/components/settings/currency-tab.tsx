@@ -24,6 +24,7 @@ const LOCALE_OPTIONS = [
   { value: 'es-VE', label: 'Venezuela (es-VE)', symbol: 'Bs.', code: 'VES' },
   { value: 'es-BO', label: 'Bolivia (es-BO)', symbol: 'Bs', code: 'BOB' },
   { value: 'es-PY', label: 'Paraguay (es-PY)', symbol: '₲', code: 'PYG' },
+  { value: 'es-CU', label: 'Cuba (es-CU)', symbol: '$MN', code: 'CUP' },
   { value: 'pt-BR', label: 'Brasil (pt-BR)', symbol: 'R$', code: 'BRL' },
   { value: 'en-US', label: 'Estados Unidos (en-US)', symbol: '$', code: 'USD' },
   { value: 'en-GB', label: 'Reino Unido (en-GB)', symbol: '£', code: 'GBP' },
