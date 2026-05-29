@@ -169,7 +169,7 @@ export function SupplierDialog({ open, onOpenChange }: SupplierDialogProps) {
           <div className="mt-6 space-y-4">
             <Button
               onClick={startCreate}
-              className="w-full bg-teal-600 hover:bg-teal-700 gap-1.5"
+              className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
               size="sm"
             >
               <Plus className="h-4 w-4" />
@@ -178,7 +178,7 @@ export function SupplierDialog({ open, onOpenChange }: SupplierDialogProps) {
 
             {/* Create/Edit form */}
             {showForm && (
-              <div className="space-y-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+              <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10">
                 <h4 className="font-medium text-sm">
                   {editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}
                 </h4>
@@ -232,7 +232,7 @@ export function SupplierDialog({ open, onOpenChange }: SupplierDialogProps) {
                     size="sm"
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex-1 bg-teal-600 hover:bg-teal-700"
+                    className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
                   >
                     {saving ? 'Guardando...' : editingSupplier ? 'Actualizar' : 'Crear'}
                   </Button>

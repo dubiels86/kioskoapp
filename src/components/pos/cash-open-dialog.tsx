@@ -101,7 +101,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
               size="sm"
               variant={useBreakdown ? 'default' : 'outline'}
               onClick={() => setUseBreakdown(true)}
-              className={useBreakdown ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+              className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
             >
               Conteo por Denominación
             </Button>
@@ -174,7 +174,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
           <Button
             onClick={handleSubmit}
             disabled={openRegisterMutation.isPending || effectiveAmount <= 0}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white"
           >
             {openRegisterMutation.isPending ? (
               <span className="flex items-center gap-2">

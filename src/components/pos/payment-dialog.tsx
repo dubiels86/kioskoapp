@@ -177,7 +177,7 @@ function PaymentDialogContent({
         <Button
           onClick={onConfirm}
           disabled={!canConfirm || isProcessing}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[140px]"
+          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white min-w-[140px]"
         >
           {isProcessing ? (
             <span className="flex items-center gap-2">

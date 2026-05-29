@@ -223,16 +223,16 @@ export function POSView() {
         {/* Warehouse Info & Cash Register Status Bar */}
         <div className="mb-3 shrink-0 space-y-2">
           {/* Warehouse Info (read-only, auto-set to VENTAS) */}
-          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800">
-            <Warehouse className="w-4 h-4 text-violet-600 dark:text-violet-400 shrink-0" />
-            <span className="text-sm font-semibold text-violet-700 dark:text-violet-300 shrink-0">
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-950/20 dark:to-emerald-950/20 border border-teal-200/60 dark:border-teal-800/50">
+            <Warehouse className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+            <span className="text-sm font-semibold text-teal-700 dark:text-teal-300 shrink-0">
               Almacén:
             </span>
-            <span className="text-sm font-medium text-violet-800 dark:text-violet-200 flex-1">
+            <span className="text-sm font-medium text-teal-800 dark:text-teal-200 flex-1">
               {selectedWarehouse?.name || 'Cargando...'}
             </span>
             {selectedWarehouse && (
-              <span className="text-xs text-violet-500 dark:text-violet-400 shrink-0 hidden sm:inline">
+              <span className="text-xs text-teal-500 dark:text-teal-400 shrink-0 hidden sm:inline">
                 ({selectedWarehouse.type === 'VENTAS' ? 'Ventas' : selectedWarehouse.type === 'PRINCIPAL' ? 'Principal' : 'Secundario'})
               </span>
             )}
@@ -242,23 +242,23 @@ export function POSView() {
           <div
             className={`flex items-center justify-between px-4 py-2.5 rounded-xl border ${
               isOpen
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
-                : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
+                ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200/70 dark:from-emerald-950/20 dark:to-green-950/20 dark:border-emerald-800/50'
+                : 'bg-gradient-to-r from-rose-50 to-red-50 border-rose-200/70 dark:from-rose-950/20 dark:to-red-950/20 dark:border-rose-800/50'
             }`}
           >
             <div className="flex items-center gap-2">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
                   isOpen
-                    ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                    : 'bg-red-500 shadow-sm shadow-red-500/50'
+                    ? 'bg-emerald-500 shadow-sm shadow-emerald-500/60'
+                    : 'bg-rose-500 shadow-sm shadow-rose-500/60'
                 }`}
               />
               <span
                 className={`text-sm font-semibold ${
                   isOpen
                     ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-red-700 dark:text-red-400'
+                    : 'text-rose-700 dark:text-rose-400'
                 }`}
               >
                 {isOpen ? 'Caja Abierta' : 'Caja Cerrada'}
@@ -275,7 +275,7 @@ export function POSView() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setCashCloseDialogOpen(true)}
-                className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-950/30"
+                className="h-8 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-100 dark:hover:bg-rose-950/30"
               >
                 <Lock className="w-3.5 h-3.5 mr-1" />
                 Cerrar Caja
@@ -284,7 +284,7 @@ export function POSView() {
               <Button
                 size="sm"
                 onClick={() => setCashOpenDialogOpen(true)}
-                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-8 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm shadow-emerald-600/20"
               >
                 <Unlock className="w-3.5 h-3.5 mr-1" />
                 Abrir Caja

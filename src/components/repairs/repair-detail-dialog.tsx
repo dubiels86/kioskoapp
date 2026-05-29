@@ -55,12 +55,12 @@ interface RepairDetailDialogProps {
 }
 
 const statusStyles: Record<string, string> = {
-  RECIBIDO: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
-  EN_REPARACION: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  ESPERANDO_REPUESTOS: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-  REPARADO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  ENTREGADO: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
-  CANCELADO: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  RECIBIDO: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border border-sky-100 dark:border-sky-800/30',
+  EN_REPARACION: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
+  ESPERANDO_REPUESTOS: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-100 dark:border-orange-800/30',
+  REPARADO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
+  ENTREGADO: 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 border border-teal-100 dark:border-teal-800/30',
+  CANCELADO: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30',
 }
 
 export function RepairDetailDialog({ open, onOpenChange, repair }: RepairDetailDialogProps) {

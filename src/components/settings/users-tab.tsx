@@ -226,7 +226,7 @@ export function UsersTab() {
             </CardTitle>
             <CardDescription>Administre los usuarios del sistema y sus roles asignados</CardDescription>
           </div>
-          <Button onClick={openCreate} className="bg-teal-600 hover:bg-teal-700 gap-1.5">
+          <Button onClick={openCreate} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Nuevo Usuario
           </Button>
@@ -270,11 +270,11 @@ export function UsersTab() {
                     </TableCell>
                     <TableCell>
                       {user.isActive ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30">
                           Activo
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30">
                           Inactivo
                         </Badge>
                       )}
@@ -386,7 +386,7 @@ export function UsersTab() {
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
             >
               {(createMutation.isPending || updateMutation.isPending) ? 'Guardando...' : editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
             </Button>
@@ -440,7 +440,7 @@ export function UsersTab() {
             <Button
               onClick={() => resetUser && resetPassMutation.mutate({ id: resetUser.id, password: newPassword })}
               disabled={resetPassMutation.isPending || newPassword.length < 4}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
             >
               {resetPassMutation.isPending ? 'Guardando...' : 'Guardar Contraseña'}
             </Button>

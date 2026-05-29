@@ -292,7 +292,7 @@ export function CashCloseDialog({
                 size="sm"
                 variant={useBreakdown ? 'default' : 'outline'}
                 onClick={() => setUseBreakdown(true)}
-                className={useBreakdown ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
               >
                 Conteo por Denominación
               </Button>
@@ -358,7 +358,7 @@ export function CashCloseDialog({
                 variant={Math.abs(difference) < 0.01 ? 'default' : 'destructive'}
                 className={
                   Math.abs(difference) < 0.01
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0'
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30'
                     : ''
                 }
               >

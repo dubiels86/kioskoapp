@@ -197,7 +197,7 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
           </Button>
           <Button
             onClick={() => onOpenChange(false)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white"
           >
             Cerrar
           </Button>

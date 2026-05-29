@@ -240,7 +240,7 @@ export function DenominationsTab() {
             <Separator />
 
             {/* Summary */}
-            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 p-4">
+            <div className="rounded-lg bg-gradient-to-r from-emerald-50/30 to-teal-50/20 dark:from-emerald-950/10 dark:to-teal-950/10 p-4">
               <p className="text-sm font-semibold text-muted-foreground mb-2">Resumen de denominaciones</p>
               <div className="flex gap-4 text-sm">
                 <span>{bills.length} billete{bills.length !== 1 ? 's' : ''}</span>
@@ -252,7 +252,7 @@ export function DenominationsTab() {
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="bg-teal-600 hover:bg-teal-700 gap-1.5"
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm"
               >
                 <Save className="h-4 w-4" />
                 {saveMutation.isPending ? 'Guardando...' : 'Guardar Denominaciones'}

@@ -527,7 +527,7 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
             <Button
               type="submit"
               disabled={isPending}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
             >
               {isPending
                 ? 'Guardando...'

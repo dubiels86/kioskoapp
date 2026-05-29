@@ -38,7 +38,7 @@ export default function Home() {
   const ActiveComponent = MODULE_COMPONENTS[activeView]
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50/40 via-white to-teal-50/30 dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950/20">
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:flex shrink-0 sticky top-0 h-screen">
@@ -51,8 +51,8 @@ export default function Home() {
           <AppHeader />
 
           {/* Desktop Title Bar */}
-          <div className="hidden lg:flex items-center h-14 px-6 border-b bg-white dark:bg-slate-950">
-            <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <div className="hidden lg:flex items-center h-14 px-6 border-b bg-white/70 dark:bg-slate-950/70 backdrop-blur-md">
+            <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
               {VIEW_LABELS[activeView]}
             </h1>
           </div>

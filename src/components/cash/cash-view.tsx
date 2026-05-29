@@ -140,9 +140,9 @@ export function CashView() {
   )
 
   const methodBadgeColors: Record<string, string> = {
-    EFECTIVO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    TRANSFERENCIA: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    CUENTA_CASA: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
+    EFECTIVO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
+    TRANSFERENCIA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
+    CUENTA_CASA: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30',
   }
 
   if (isLoading) {
@@ -158,10 +158,10 @@ export function CashView() {
     return (
       <>
         <div className="flex items-center justify-center h-full min-h-[60vh]">
-          <Card className="w-full max-w-md">
+          <Card className="w-full max-w-md border-emerald-100 dark:border-emerald-900/30 shadow-lg shadow-emerald-500/5">
             <CardContent className="flex flex-col items-center gap-6 py-10">
-              <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center">
-                <Banknote className="w-10 h-10 text-slate-400" />
+              <div className="w-20 h-20 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-900/30">
+                <Banknote className="w-10 h-10 text-emerald-500/60" />
               </div>
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Caja Cerrada</h2>
@@ -172,7 +172,7 @@ export function CashView() {
               <Button
                 size="lg"
                 onClick={() => setOpenDialog(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-2 shadow-lg shadow-emerald-600/20"
               >
                 <Banknote className="w-5 h-5" />
                 Abrir Caja
@@ -183,10 +183,10 @@ export function CashView() {
 
         {history.length > 0 && (
           <div className="mt-8">
-            <Card>
+            <Card className="border-emerald-100 dark:border-emerald-900/30">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <History className="w-4 h-4" />
+                  <History className="w-4 h-4 text-emerald-600" />
                   Últimas Cajas Cerradas
                 </CardTitle>
               </CardHeader>
@@ -216,7 +216,7 @@ export function CashView() {
                         <TableCell>{reg.closingAmount !== null ? formatCurrency(reg.closingAmount) : '-'}</TableCell>
                         <TableCell>
                           {reg.difference !== null ? (
-                            <span className={reg.difference >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                            <span className={reg.difference >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
                               {reg.difference >= 0 ? '+' : ''}{formatCurrency(reg.difference)}
                             </span>
                           ) : '-'}
@@ -243,10 +243,10 @@ export function CashView() {
       <div className="space-y-6">
         {/* Top summary cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-lg flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/30">
                   <Wallet className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
@@ -257,10 +257,10 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 rounded-lg flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/30">
                   <Banknote className="w-5 h-5 text-emerald-600" />
                 </div>
                 <div>
@@ -272,10 +272,10 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-amber-100 dark:border-amber-900/30 shadow-sm shadow-amber-500/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg flex items-center justify-center border border-amber-200/50 dark:border-amber-800/30">
                   <CreditCard className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
@@ -287,15 +287,15 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-teal-100 dark:border-teal-900/30 shadow-sm shadow-teal-500/5">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 dark:bg-teal-900/30 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-900/30 rounded-lg flex items-center justify-center border border-teal-200/50 dark:border-teal-800/30">
                   <TrendingUp className="w-5 h-5 text-teal-600" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Total Ventas</p>
-                  <p className="text-lg font-bold">{formatCurrency(totalVentas)}</p>
+                  <p className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">{formatCurrency(totalVentas)}</p>
                   <p className="text-xs text-muted-foreground">{cashRegister.sales.length} ventas</p>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export function CashView() {
         {/* Sales by Payment Method + Cash Movements */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Sales by Payment Method */}
-          <Card>
+          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Ventas por Método de Pago</CardTitle>
             </CardHeader>
@@ -335,11 +335,11 @@ export function CashView() {
           </Card>
 
           {/* Cash Movements */}
-          <Card>
+          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Movimientos de Caja</CardTitle>
-                <Button size="sm" onClick={() => setMovementDialog(true)} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
+                <Button size="sm" onClick={() => setMovementDialog(true)} className="gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
                   <Plus className="w-4 h-4" />
                   Registrar
                 </Button>
@@ -367,12 +367,12 @@ export function CashView() {
                           <TableCell className="text-xs">{formatTime(mov.createdAt)}</TableCell>
                           <TableCell>
                             {mov.type === 'ENTRADA' ? (
-                              <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 gap-1">
+                              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30 gap-1">
                                 <ArrowUpCircle className="w-3 h-3" />
                                 Entrada
                               </Badge>
                             ) : (
-                              <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 gap-1">
+                              <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30 gap-1">
                                 <ArrowDownCircle className="w-3 h-3" />
                                 Salida
                               </Badge>
@@ -380,7 +380,7 @@ export function CashView() {
                           </TableCell>
                           <TableCell className="text-sm max-w-[120px] truncate">{mov.reason}</TableCell>
                           <TableCell className="text-right font-medium">
-                            <span className={mov.type === 'ENTRADA' ? 'text-emerald-600' : 'text-red-500'}>
+                            <span className={mov.type === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-500'}>
                               {mov.type === 'ENTRADA' ? '+' : '-'}{formatCurrency(mov.amount)}
                             </span>
                           </TableCell>
@@ -395,10 +395,10 @@ export function CashView() {
         </div>
 
         {/* Recent Sales */}
-        <Card>
+        <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-4 h-4 text-emerald-600" />
               Ventas Recientes
             </CardTitle>
           </CardHeader>
@@ -423,7 +423,7 @@ export function CashView() {
                     {recentSales.map((sale, idx) => (
                       <TableRow
                         key={sale.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20"
                         onClick={() => setSelectedSale(sale)}
                       >
                         <TableCell className="text-xs text-muted-foreground">{cashRegister.sales.length - idx}</TableCell>
@@ -464,10 +464,10 @@ export function CashView() {
 
         {/* Cash Register History */}
         {history.length > 0 && (
-          <Card>
+          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <History className="w-4 h-4" />
+                <History className="w-4 h-4 text-emerald-600" />
                 Últimas Cajas Cerradas
               </CardTitle>
             </CardHeader>
@@ -498,7 +498,7 @@ export function CashView() {
                         <TableCell>{reg.closingAmount !== null ? formatCurrency(reg.closingAmount) : '-'}</TableCell>
                         <TableCell>
                           {reg.difference !== null ? (
-                            <span className={reg.difference >= 0 ? 'text-emerald-600' : 'text-red-500'}>
+                            <span className={reg.difference >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
                               {reg.difference >= 0 ? '+' : ''}{formatCurrency(reg.difference)}
                             </span>
                           ) : '-'}

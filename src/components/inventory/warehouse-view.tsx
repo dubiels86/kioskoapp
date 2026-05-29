@@ -248,7 +248,7 @@ function WarehouseFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
             {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Depósito'}
           </Button>
         </DialogFooter>
@@ -334,7 +334,7 @@ export function WarehouseView() {
             setEditingWarehouse(null)
             setFormOpen(true)
           }}
-          className="bg-teal-600 hover:bg-teal-700 gap-1.5"
+          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
         >
           <Plus className="h-4 w-4" />
           Nuevo Depósito
@@ -511,11 +511,11 @@ export function WarehouseView() {
                                         <TableCell className="text-right text-muted-foreground">{s.minStock}</TableCell>
                                         <TableCell>
                                           {s.stock === 0 ? (
-                                            <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs">
+                                            <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30 text-xs">
                                               Sin Stock
                                             </Badge>
                                           ) : s.stock <= s.minStock ? (
-                                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs">
+                                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30 text-xs">
                                               Bajo Stock
                                             </Badge>
                                           ) : (

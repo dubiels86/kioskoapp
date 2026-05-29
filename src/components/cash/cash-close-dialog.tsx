@@ -137,8 +137,8 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
   }
 
   const methodBadgeColors: Record<string, string> = {
-    EFECTIVO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    TRANSFERENCIA: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    EFECTIVO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
+    TRANSFERENCIA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
     CUENTA_CASA: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
   }
 
@@ -243,7 +243,7 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
                 size="sm"
                 variant={useBreakdown ? 'default' : 'outline'}
                 onClick={() => setUseBreakdown(true)}
-                className={useBreakdown ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
               >
                 Conteo por Denominación
               </Button>

@@ -185,7 +185,7 @@ export function RolesTab() {
             </CardTitle>
             <CardDescription>Defina roles y permisos para el acceso al sistema</CardDescription>
           </div>
-          <Button onClick={openCreate} className="bg-teal-600 hover:bg-teal-700 gap-1.5">
+          <Button onClick={openCreate} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Nuevo Rol
           </Button>
@@ -241,11 +241,11 @@ export function RolesTab() {
                     <TableCell className="text-center">{role.userCount}</TableCell>
                     <TableCell>
                       {role.isActive ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30">
                           Activo
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="bg-red-100 text-red-700">
+                        <Badge variant="secondary" className="bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30">
                           Inactivo
                         </Badge>
                       )}
@@ -354,7 +354,7 @@ export function RolesTab() {
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-teal-600 hover:bg-teal-700"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
             >
               {(createMutation.isPending || updateMutation.isPending) ? 'Guardando...' : editingRole ? 'Guardar Cambios' : 'Crear Rol'}
             </Button>

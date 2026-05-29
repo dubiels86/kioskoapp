@@ -55,11 +55,11 @@ interface Purchase {
 function getStatusBadgeClass(status: PurchaseStatus) {
   switch (status) {
     case 'PENDIENTE':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-100'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30 hover:bg-amber-50'
     case 'RECIBIDA':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30 hover:bg-emerald-50'
     case 'CANCELADA':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100'
+      return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30 hover:bg-rose-50'
     default:
       return ''
   }
@@ -106,7 +106,7 @@ export function PurchasesView() {
         <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => setNewPurchaseOpen(true)}
-            className="bg-teal-600 hover:bg-teal-700 gap-1.5"
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
           >
             <Plus className="h-4 w-4" />
             Nueva Compra
@@ -134,7 +134,7 @@ export function PurchasesView() {
       </div>
 
       {/* Purchases table */}
-      <div className="rounded-md border bg-white dark:bg-slate-950 overflow-x-auto">
+      <div className="rounded-md border border-emerald-100 dark:border-emerald-900/30 bg-white dark:bg-slate-950 shadow-sm shadow-emerald-500/5 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

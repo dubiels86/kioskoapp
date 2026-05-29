@@ -301,7 +301,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
 
           {/* Current stock info */}
           {selectedProduct && sourceStock !== null && (
-            <div className="rounded-lg border bg-slate-50 dark:bg-slate-900/50 p-3">
+            <div className="rounded-lg border bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 p-3">
               <p className="text-sm text-muted-foreground">
                 Stock de <span className="font-medium text-foreground">{selectedProduct.name}</span> en{' '}
                 <span className="font-medium text-foreground">{fromWarehouse?.name}</span>:
@@ -353,7 +353,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
           <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false) }} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
             {saving ? 'Transfiriendo...' : 'Transferir'}
           </Button>
         </DialogFooter>

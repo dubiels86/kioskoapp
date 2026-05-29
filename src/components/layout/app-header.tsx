@@ -29,24 +29,24 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center h-14 px-4 border-b bg-white dark:bg-slate-950 gap-3 lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center h-14 px-4 border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur-md gap-3 lg:hidden">
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0"
+          className="shrink-0 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
           onClick={() => setSheetOpen(true)}
           aria-label="Abrir menú"
         >
           <Menu className="w-5 h-5" />
         </Button>
-        <h1 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">
+        <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate">
           {VIEW_LABELS[activeView]}
         </h1>
       </header>
 
       {/* Mobile sidebar sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="p-0 w-60 bg-slate-900 border-none">
+        <SheetContent side="left" className="p-0 w-60 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-900 border-none">
           <SheetHeader className="sr-only">
             <SheetTitle>Menú de navegación</SheetTitle>
           </SheetHeader>

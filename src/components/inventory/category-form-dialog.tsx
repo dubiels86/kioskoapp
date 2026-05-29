@@ -123,7 +123,7 @@ export function CategoryFormDialog({ open, onOpenChange, category }: CategoryFor
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
             {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Categoría'}
           </Button>
         </DialogFooter>

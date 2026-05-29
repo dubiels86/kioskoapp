@@ -56,12 +56,12 @@ interface Repair {
 }
 
 const statusStyles: Record<string, string> = {
-  RECIBIDO: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
-  EN_REPARACION: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  ESPERANDO_REPUESTOS: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-  REPARADO: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  ENTREGADO: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300',
-  CANCELADO: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  RECIBIDO: 'bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 border border-sky-100 dark:border-sky-800/30',
+  EN_REPARACION: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
+  ESPERANDO_REPUESTOS: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-100 dark:border-orange-800/30',
+  REPARADO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
+  ENTREGADO: 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 border border-teal-100 dark:border-teal-800/30',
+  CANCELADO: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30',
 }
 
 const STATUS_TABS: Array<{ value: string; label: string }> = [
@@ -139,7 +139,7 @@ export function RepairsView() {
           </div>
           <Button
             onClick={() => { setEditingRepair(null); setFormDialog(true) }}
-            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+            className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Nueva Reparación
@@ -161,7 +161,7 @@ export function RepairsView() {
         {filteredRepairs.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl flex items-center justify-center mb-4">
                 <Wrench className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -179,7 +179,7 @@ export function RepairsView() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredRepairs.map((repair) => (
-              <Card key={repair.id} className="hover:shadow-md transition-shadow">
+              <Card key={repair.id} className="hover:shadow-md hover:shadow-emerald-500/5 transition-shadow">
                 <CardContent className="p-4 space-y-3">
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
@@ -214,7 +214,7 @@ export function RepairsView() {
                       <Clock className="w-3 h-3" />
                       {formatDate(repair.receivedAt)}
                     </div>
-                    <span className="font-semibold text-sm">
+                    <span className="font-semibold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
                       {formatCurrency(repair.totalCost)}
                     </span>
                   </div>

@@ -34,21 +34,29 @@ const PAYMENT_METHODS: {
   value: PaymentMethod
   label: string
   icon: React.ComponentType<{ className?: string }>
+  color: string
+  activeColor: string
 }[] = [
   {
     value: 'EFECTIVO',
     label: PAYMENT_METHOD_LABELS.EFECTIVO,
     icon: Banknote,
+    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-600',
+    activeColor: 'border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 text-emerald-700 dark:text-emerald-400 shadow-sm shadow-emerald-500/10',
   },
   {
     value: 'TRANSFERENCIA',
     label: PAYMENT_METHOD_LABELS.TRANSFERENCIA,
     icon: ArrowRightLeft,
+    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-amber-300 dark:hover:border-amber-600',
+    activeColor: 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 text-amber-700 dark:text-amber-400 shadow-sm shadow-amber-500/10',
   },
   {
     value: 'CUENTA_CASA',
     label: PAYMENT_METHOD_LABELS.CUENTA_CASA,
     icon: Home,
+    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-violet-300 dark:hover:border-violet-600',
+    activeColor: 'border-violet-500 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40 text-violet-700 dark:text-violet-400 shadow-sm shadow-violet-500/10',
   },
 ]
 
@@ -82,11 +90,13 @@ export function CartPanel({
   const canProcess = !isCartEmpty && currentCashRegisterId !== null && !hasOutOfStockItem
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-950 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm shadow-emerald-500/5">
       {/* Cart Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-100 dark:border-emerald-900/30 shrink-0 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
         <div className="flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm shadow-emerald-500/20">
+            <ShoppingCart className="w-4 h-4 text-white" />
+          </div>
           <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
             Carrito
           </h2>
@@ -101,7 +111,7 @@ export function CartPanel({
             variant="ghost"
             size="sm"
             onClick={clearCart}
-            className="text-slate-500 hover:text-red-600 text-xs h-8"
+            className="text-slate-500 hover:text-rose-600 text-xs h-8"
           >
             Limpiar
           </Button>
@@ -137,9 +147,9 @@ export function CartPanel({
       {/* Out of stock warning */}
       {hasOutOfStockItem && !isCartEmpty && (
         <div className="shrink-0 px-4 py-2 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800">
-            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
-            <p className="text-xs text-red-700 dark:text-red-400 font-medium">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800">
+            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+            <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">
               Sin stock en almacén — no se puede cobrar
             </p>
           </div>
@@ -148,7 +158,7 @@ export function CartPanel({
 
       {/* Cart Summary */}
       {!isCartEmpty && (
-        <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3 space-y-2">
+        <div className="shrink-0 border-t border-emerald-100 dark:border-emerald-900/30 px-4 py-3 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Subtotal</span>
             <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -183,13 +193,13 @@ export function CartPanel({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="bg-emerald-100 dark:bg-emerald-900/30" />
 
           <div className="flex justify-between items-baseline">
             <span className="font-bold text-slate-900 dark:text-slate-100">
               Total
             </span>
-            <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
               {formatCurrency(total)}
             </span>
           </div>
@@ -206,7 +216,7 @@ export function CartPanel({
       )}
 
       {/* Payment Method Selection */}
-      <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3">
+      <div className="shrink-0 border-t border-emerald-100 dark:border-emerald-900/30 px-4 py-3">
         <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
           Método de pago
         </p>
@@ -219,12 +229,8 @@ export function CartPanel({
                 key={method.value}
                 onClick={() => setSelectedPaymentMethod(method.value)}
                 className={`
-                  flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all duration-150 min-h-[60px]
-                  ${
-                    isSelected
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
-                  }
+                  flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all duration-200 min-h-[60px]
+                  ${isSelected ? method.activeColor : method.color}
                 `}
               >
                 <Icon className="w-5 h-5" />
@@ -251,7 +257,7 @@ export function CartPanel({
         <Button
           onClick={onProcessSale}
           disabled={!canProcess || isProcessing}
-          className="w-full h-13 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-600/20 transition-all disabled:opacity-50 disabled:shadow-none"
+          className="w-full h-13 text-base font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 disabled:shadow-none"
           size="lg"
         >
           {isProcessing ? (
@@ -264,7 +270,7 @@ export function CartPanel({
           )}
         </Button>
         {currentCashRegisterId === null && !isCartEmpty && (
-          <p className="text-[10px] text-red-500 text-center mt-1.5">
+          <p className="text-[10px] text-rose-500 text-center mt-1.5">
             Abrí la caja para poder cobrar
           </p>
         )}
@@ -285,13 +291,13 @@ function CartItemRow({
   const isOutOfStock = item.stock <= 0
 
   return (
-    <div className={`flex items-start gap-2 p-2.5 rounded-xl border group ${
+    <div className={`flex items-start gap-2 p-2.5 rounded-xl border group transition-colors ${
       isOutOfStock
-        ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800'
-        : 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800'
+        ? 'bg-rose-50/50 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800'
+        : 'bg-gradient-to-r from-slate-50 to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/10 border-emerald-100 dark:border-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/30'
     }`}>
       {/* Product Image */}
-      <div className="w-8 h-8 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
+      <div className="w-8 h-8 rounded-md border border-emerald-100 dark:border-emerald-900/30 bg-white dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
         {item.image ? (
           <Image
             src={item.image}
@@ -314,7 +320,7 @@ function CartItemRow({
           {formatCurrency(item.salePrice)} c/u
         </p>
         {isOutOfStock && (
-          <p className="text-[10px] text-red-600 dark:text-red-400 font-medium mt-0.5 flex items-center gap-1">
+          <p className="text-[10px] text-rose-600 dark:text-rose-400 font-medium mt-0.5 flex items-center gap-1">
             <AlertCircle className="w-3 h-3" />
             Sin stock en almacén
           </p>
@@ -325,7 +331,7 @@ function CartItemRow({
         <Button
           variant="outline"
           size="icon"
-          className="h-7 w-7 rounded-lg"
+          className="h-7 w-7 rounded-lg border-emerald-200 dark:border-emerald-800/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
           onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
         >
           <Minus className="w-3 h-3" />
@@ -336,7 +342,7 @@ function CartItemRow({
         <Button
           variant="outline"
           size="icon"
-          className="h-7 w-7 rounded-lg"
+          className="h-7 w-7 rounded-lg border-emerald-200 dark:border-emerald-800/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
           disabled={item.quantity >= item.stock}
           onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
         >
@@ -345,13 +351,13 @@ function CartItemRow({
       </div>
 
       <div className="flex flex-col items-end shrink-0">
-        <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+        <span className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
           {formatCurrency(item.subtotal)}
         </span>
         <Button
           variant="ghost"
           size="icon"
-          className="h-5 w-5 rounded opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500"
+          className="h-5 w-5 rounded opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500"
           onClick={() => onRemove(item.productId)}
         >
           <Trash2 className="w-3 h-3" />

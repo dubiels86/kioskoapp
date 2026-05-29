@@ -131,19 +131,19 @@ export function ProductGrid({ warehouseId }: ProductGridProps) {
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 pb-4 shrink-0">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500/50" />
           <Input
             placeholder="Buscar por nombre o código..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="pl-9 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+            className="pl-9 h-11 bg-white dark:bg-slate-900 border-emerald-200/60 dark:border-emerald-900/30 focus:border-emerald-400 focus:ring-emerald-400/20"
           />
         </div>
         <Select
           value={posCategoryFilter}
           onValueChange={setPosCategoryFilter}
         >
-          <SelectTrigger className="w-full sm:w-52 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700">
+          <SelectTrigger className="w-full sm:w-52 h-11 bg-white dark:bg-slate-900 border-emerald-200/60 dark:border-emerald-900/30">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -229,11 +229,11 @@ function ProductCard({
       onClick={() => onAdd(product)}
       disabled={isOutOfStock}
       className={`
-        group relative flex flex-col items-start p-3 rounded-xl border transition-all duration-150 text-left
+        group relative flex flex-col items-start p-3 rounded-xl border transition-all duration-200 text-left
         ${
           isOutOfStock
             ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
-            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/5 hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
+            : 'bg-white dark:bg-slate-900 border-emerald-100 dark:border-emerald-900/20 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg hover:shadow-emerald-500/8 hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
         }
       `}
     >
@@ -242,7 +242,7 @@ function ProductCard({
         {product.category && (
           <Badge
             variant="secondary"
-            className="text-[10px] px-1.5 py-0 h-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium"
+            className="text-[10px] px-1.5 py-0 h-5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-100 dark:border-emerald-900/30"
           >
             {product.category.name}
           </Badge>
@@ -250,13 +250,13 @@ function ProductCard({
         {isOutOfStock && (
           <Badge
             variant="destructive"
-            className="text-[10px] px-1.5 py-0 h-5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-0"
+            className="text-[10px] px-1.5 py-0 h-5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30"
           >
             Agotado
           </Badge>
         )}
         {isLowStock && (
-          <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-0">
+          <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30">
             Bajo stock
           </Badge>
         )}
@@ -265,7 +265,7 @@ function ProductCard({
       {/* Product Image & Name */}
       <div className="flex items-start gap-2.5 w-full mb-1">
         {/* Product Image Thumbnail */}
-        <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
+        <div className="w-12 h-12 rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 shrink-0 overflow-hidden flex items-center justify-center">
           {product.image ? (
             <Image
               src={product.image}
@@ -276,17 +276,17 @@ function ProductCard({
               unoptimized
             />
           ) : (
-            <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-600" />
+            <ImageIcon className="w-5 h-5 text-emerald-300 dark:text-emerald-700" />
           )}
         </div>
 
-        <h3 className="font-semibold text-sm text-slate-900 dark:text-slate-100 leading-tight line-clamp-2 flex-1">
+        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 flex-1">
           {product.name}
         </h3>
       </div>
 
       {/* Price */}
-      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-auto ml-0">
+      <p className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent mt-auto ml-0">
         {formatCurrency(product.salePrice)}
       </p>
 
@@ -295,7 +295,7 @@ function ProductCard({
         <span
           className={`w-1.5 h-1.5 rounded-full ${
             isOutOfStock
-              ? 'bg-red-400'
+              ? 'bg-rose-400'
               : isLowStock
                 ? 'bg-amber-400'
                 : 'bg-emerald-400'
@@ -313,7 +313,7 @@ function ProductCard({
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+    <div className="flex flex-col p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/20 bg-white dark:bg-slate-900">
       <Skeleton className="h-5 w-16 mb-2" />
       <div className="flex items-start gap-2.5 mb-1">
         <Skeleton className="w-12 h-12 rounded-lg shrink-0" />

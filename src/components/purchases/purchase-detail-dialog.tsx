@@ -82,11 +82,11 @@ interface Purchase {
 function getStatusBadgeClass(status: PurchaseStatus) {
   switch (status) {
     case 'PENDIENTE':
-      return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 hover:bg-yellow-100'
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30 hover:bg-amber-50'
     case 'RECIBIDA':
-      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-100'
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30 hover:bg-emerald-50'
     case 'CANCELADA':
-      return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100'
+      return 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30 hover:bg-rose-50'
     default:
       return ''
   }
@@ -262,7 +262,7 @@ export function PurchaseDetailDialog({ open, onOpenChange, purchaseId }: Purchas
             </div>
 
             {/* Total */}
-            <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 rounded-lg">
               <span className="font-medium">Total</span>
               <span className="text-xl font-bold text-teal-600 dark:text-teal-400">
                 {formatCurrency(purchase.totalAmount)}
@@ -312,7 +312,7 @@ export function PurchaseDetailDialog({ open, onOpenChange, purchaseId }: Purchas
                     Cancelar Compra
                   </Button>
                   <Button
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
                     onClick={handleReceive}
                     disabled={updateStatusMutation.isPending || !receiveWarehouseId}
                   >
