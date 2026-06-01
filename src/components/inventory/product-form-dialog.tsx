@@ -226,7 +226,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
                 </div>
               ) : (
                 <div
-                  className="w-20 h-20 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center cursor-pointer hover:border-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
+                  className="w-20 h-20 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center cursor-pointer hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <ImagePlus className="h-6 w-6 text-muted-foreground/50" />
@@ -390,7 +390,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm">
             {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Producto'}
           </Button>
         </DialogFooter>

@@ -97,7 +97,7 @@ export function BillBreakdownInput({
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Banknote className="w-4 h-4 text-emerald-600" />
+        <Banknote className="w-4 h-4 text-primary" />
         <Label className="text-sm font-semibold">{label}</Label>
       </div>
 
@@ -113,12 +113,12 @@ export function BillBreakdownInput({
                 key={denom.value}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${
                   count > 0
-                    ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800'
+                    ? 'bg-slate-50 border-slate-300 dark:bg-slate-800 dark:border-slate-700'
                     : 'bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800'
                 }`}
               >
                 <span className={`text-sm font-bold min-w-[60px] ${
-                  count > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'
+                  count > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-500'
                 }`}>
                   {denom.label}
                 </span>
@@ -143,7 +143,7 @@ export function BillBreakdownInput({
         {billsTotal > 0 && (
           <div className="flex justify-end pr-1">
             <span className="text-xs text-muted-foreground">
-              Subtotal billetes: <span className="font-semibold text-emerald-700 dark:text-emerald-400">{formatCurrency(billsTotal)}</span>
+              Subtotal billetes: <span className="font-semibold text-slate-700 dark:text-slate-300">{formatCurrency(billsTotal)}</span>
             </span>
           </div>
         )}
@@ -205,9 +205,9 @@ export function BillBreakdownInput({
       {showTotal && (
         <>
           <Separator />
-          <div className="flex items-center justify-between rounded-lg bg-emerald-100 dark:bg-emerald-900/30 px-4 py-3">
+          <div className="flex items-center justify-between rounded-lg bg-muted px-4 py-3">
             <span className="text-sm font-semibold">Total Contado</span>
-            <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+            <span className="text-lg font-bold text-primary">
               {formatCurrency(total)}
             </span>
           </div>
@@ -233,7 +233,7 @@ export function BillBreakdownDisplay({ breakdown, label = 'Desglose de Efectivo'
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Banknote className="w-4 h-4 text-emerald-600" />
+        <Banknote className="w-4 h-4 text-primary" />
         <Label className="text-sm font-semibold">{label}</Label>
       </div>
       <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3 space-y-1">
@@ -253,7 +253,7 @@ export function BillBreakdownDisplay({ breakdown, label = 'Desglose de Efectivo'
         <Separator className="my-1" />
         <div className="flex items-center justify-between font-bold text-sm">
           <span>Total</span>
-          <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(total)}</span>
+          <span className="text-primary">{formatCurrency(total)}</span>
         </div>
       </div>
     </div>

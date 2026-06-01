@@ -225,11 +225,11 @@ export function ReportsView() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 border border-emerald-200/50 dark:border-emerald-800/30 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-4 h-4 text-emerald-600" />
+                <div className="w-9 h-9 bg-muted border rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Total Ventas</p>
@@ -240,11 +240,11 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 border border-emerald-200/50 dark:border-emerald-800/30 rounded-lg flex items-center justify-center">
-                  <Banknote className="w-4 h-4 text-emerald-600" />
+                <div className="w-9 h-9 bg-muted border rounded-lg flex items-center justify-center">
+                  <Banknote className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Efectivo</p>
@@ -255,7 +255,7 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200/50 dark:border-amber-800/30 rounded-lg flex items-center justify-center">
@@ -270,7 +270,7 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 border border-violet-200/50 dark:border-violet-800/30 rounded-lg flex items-center justify-center">
@@ -285,7 +285,7 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-gradient-to-br from-orange-100 to-rose-100 dark:from-orange-900/30 dark:to-rose-900/30 border border-orange-200/50 dark:border-orange-800/30 rounded-lg flex items-center justify-center">
@@ -299,15 +299,15 @@ export function ReportsView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-900/30 border border-teal-200/50 dark:border-teal-800/30 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-teal-600" />
+                <div className="w-9 h-9 bg-muted border rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Ganancia Bruta</p>
-                  <p className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">{formatCurrency(report.grossProfit)}</p>
+                  <p className="text-sm font-bold text-primary">{formatCurrency(report.grossProfit)}</p>
                 </div>
               </div>
             </CardContent>
@@ -315,15 +315,15 @@ export function ReportsView() {
         </div>
 
         {/* Sales by Payment Method - Visual */}
-        <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+        <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Ventas por Método de Pago</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {[
-              { method: 'EFECTIVO' as PaymentMethod, data: report.salesByMethod.EFECTIVO, color: 'bg-gradient-to-r from-emerald-500 to-teal-500', bgLight: 'bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 border border-emerald-200/50 dark:border-emerald-800/30' },
-              { method: 'TRANSFERENCIA' as PaymentMethod, data: report.salesByMethod.TRANSFERENCIA, color: 'bg-gradient-to-r from-amber-500 to-orange-500', bgLight: 'bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200/50 dark:border-amber-800/30' },
-              { method: 'CUENTA_CASA' as PaymentMethod, data: report.salesByMethod.CUENTA_CASA, color: 'bg-gradient-to-r from-violet-500 to-purple-500', bgLight: 'bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 border border-violet-200/50 dark:border-violet-800/30' },
+              { method: 'EFECTIVO' as PaymentMethod, data: report.salesByMethod.EFECTIVO, color: 'bg-emerald-500', bgLight: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30' },
+              { method: 'TRANSFERENCIA' as PaymentMethod, data: report.salesByMethod.TRANSFERENCIA, color: 'bg-amber-500', bgLight: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30' },
+              { method: 'CUENTA_CASA' as PaymentMethod, data: report.salesByMethod.CUENTA_CASA, color: 'bg-violet-500', bgLight: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30' },
             ].map(({ method, data, color, bgLight }) => (
               <div key={method} className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -350,7 +350,7 @@ export function ReportsView() {
 
         {/* CUENTA_CASA / Merma Detail */}
         {cuentaCasaItems.length > 0 && (
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <ArrowDownRight className="w-4 h-4 text-red-500" />
@@ -388,7 +388,7 @@ export function ReportsView() {
         )}
 
         {/* Sales List */}
-        <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+        <Card className="border-border shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Listado de Ventas</CardTitle>
           </CardHeader>
@@ -436,7 +436,7 @@ export function ReportsView() {
 
         {/* Cash Register Info */}
         {report.cashRegister.registers.length > 0 && (
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Banknote className="w-4 h-4" />
@@ -514,7 +514,7 @@ export function ReportsView() {
 
         {/* Currently open register */}
         {report.cashRegister.open && (
-          <Card className="border-emerald-200 dark:border-emerald-800/50 shadow-sm shadow-emerald-500/5">
+          <Card className="border-emerald-200 dark:border-emerald-800/50 shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />

@@ -172,7 +172,7 @@ export function CashCloseDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-emerald-600" />
+            <Banknote className="w-5 h-5 text-primary" />
             Cerrar Caja
           </DialogTitle>
           <DialogDescription>
@@ -292,7 +292,7 @@ export function CashCloseDialog({
                 size="sm"
                 variant={useBreakdown ? 'default' : 'outline'}
                 onClick={() => setUseBreakdown(true)}
-                className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
+                className={useBreakdown ? 'shadow-sm' : ''}
               >
                 Conteo por Denominación
               </Button>
@@ -342,7 +342,7 @@ export function CashCloseDialog({
             <div
               className={`flex items-center justify-between p-3 rounded-xl border ${
                 Math.abs(difference) < 0.01
-                  ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'
                   : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
               }`}
             >

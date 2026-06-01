@@ -200,7 +200,7 @@ export function CurrencyTab() {
             <Separator />
 
             {/* Preview */}
-            <div className="rounded-lg border bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 p-4 space-y-3">
+            <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
               <p className="text-sm font-semibold text-muted-foreground">Vista Previa</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -223,7 +223,7 @@ export function CurrencyTab() {
               <Button
                 onClick={handleSave}
                 disabled={saveMutation.isPending}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 shadow-sm"
               >
                 <Save className="h-4 w-4" />
                 {saveMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}

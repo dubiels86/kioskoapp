@@ -226,7 +226,7 @@ export function UsersTab() {
             </CardTitle>
             <CardDescription>Administre los usuarios del sistema y sus roles asignados</CardDescription>
           </div>
-          <Button onClick={openCreate} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm">
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Nuevo Usuario
           </Button>
@@ -386,7 +386,7 @@ export function UsersTab() {
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               {(createMutation.isPending || updateMutation.isPending) ? 'Guardando...' : editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
             </Button>
@@ -440,7 +440,7 @@ export function UsersTab() {
             <Button
               onClick={() => resetUser && resetPassMutation.mutate({ id: resetUser.id, password: newPassword })}
               disabled={resetPassMutation.isPending || newPassword.length < 4}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               {resetPassMutation.isPending ? 'Guardando...' : 'Guardar Contraseña'}
             </Button>

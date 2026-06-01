@@ -81,7 +81,7 @@ export function RepairDetailDialog({ open, onOpenChange, repair }: RepairDetailD
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-emerald-600" />
+            <Wrench className="w-5 h-5 text-primary" />
             Detalle de Reparación
           </DialogTitle>
           <DialogDescription>

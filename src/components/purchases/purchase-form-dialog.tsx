@@ -392,9 +392,9 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
           )}
 
           {/* Summary */}
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <span className="text-sm font-medium">Total de la Compra</span>
-            <span className="text-xl font-bold text-teal-600 dark:text-teal-400">
+            <span className="text-xl font-bold text-primary">
               {formatCurrency(total)}
             </span>
           </div>
@@ -407,7 +407,7 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
           <Button
             onClick={handleSubmit}
             disabled={saving || items.length === 0}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
           >
             {saving ? 'Registrando...' : 'Registrar Compra'}
           </Button>

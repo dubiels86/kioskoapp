@@ -182,7 +182,7 @@ export function GeneralTab() {
               <Button
                 onClick={handleSave}
                 disabled={saveMutation.isPending}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 shadow-sm"
               >
                 <Save className="h-4 w-4" />
                 {saveMutation.isPending ? 'Guardando...' : 'Guardar Configuración'}

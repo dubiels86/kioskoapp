@@ -80,7 +80,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-emerald-600" />
+            <Banknote className="w-5 h-5 text-primary" />
             Abrir Caja
           </DialogTitle>
           <DialogDescription>
@@ -96,7 +96,6 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
                 size="sm"
                 variant={useBreakdown ? 'default' : 'outline'}
                 onClick={() => setUseBreakdown(true)}
-                className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
               >
                 Conteo por Denominación
               </Button>
@@ -138,12 +137,12 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
 
             {/* Show the total that will be used */}
             {effectiveAmount > 0 && (
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3">
+              <div className="rounded-lg bg-muted border px-4 py-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Monto de Apertura
                   </span>
-                  <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400">
+                  <span className="text-xl font-bold text-primary">
                     {formatCurrency(effectiveAmount)}
                   </span>
                 </div>
@@ -157,7 +156,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
             <Button
               type="submit"
               disabled={mutation.isPending || effectiveAmount <= 0}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               {mutation.isPending ? 'Abriendo...' : 'Abrir Caja'}
             </Button>

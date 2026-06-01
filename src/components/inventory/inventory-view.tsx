@@ -300,7 +300,7 @@ export function InventoryView() {
                   setEditingProduct(null)
                   setProductDialogOpen(true)
                 }}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
+                className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm gap-1.5"
               >
                 <Plus className="h-4 w-4" />
                 Nuevo Producto
@@ -336,7 +336,7 @@ export function InventoryView() {
           </div>
 
           {/* Products table */}
-          <div className="rounded-md border bg-white dark:bg-slate-950 border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5 overflow-x-auto">
+          <div className="rounded-md border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -489,7 +489,7 @@ export function InventoryView() {
                       {/* Expanded stock breakdown */}
                       {expandedStock === product.id && product.stocks && product.stocks.length > 1 && (
                         <TableRow key={`${product.id}-stock`}>
-                          <TableCell colSpan={9} className="bg-gradient-to-r from-emerald-50/30 to-teal-50/20 dark:from-emerald-950/10 dark:to-teal-950/10 p-0">
+                          <TableCell colSpan={9} className="bg-slate-50 dark:bg-slate-900/30 p-0">
                             <div className="p-3 px-6">
                               <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                 Stock por depósito
@@ -498,7 +498,7 @@ export function InventoryView() {
                                 {product.stocks.map((s) => (
                                   <div
                                     key={s.warehouseId}
-                                    className="flex items-center gap-2 rounded-lg border bg-white dark:bg-slate-950 border-emerald-100/60 dark:border-emerald-900/20 px-3 py-2"
+                                    className="flex items-center gap-2 rounded-lg border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 px-3 py-2"
                                   >
                                     <WarehouseIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                     <span className="text-xs text-muted-foreground">{s.warehouse.name}:</span>
@@ -559,7 +559,7 @@ export function InventoryView() {
           <Collapsible open={categoriesOpen} onOpenChange={setCategoriesOpen}>
             <Card>
               <CollapsibleTrigger asChild>
-                <CardHeader className="cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30 transition-colors rounded-t-lg">
+                <CardHeader className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900/30 border-slate-200 dark:border-slate-800 transition-colors rounded-t-lg">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base font-semibold">Gestión de Categorías</CardTitle>
                     {categoriesOpen ? (
@@ -582,7 +582,7 @@ export function InventoryView() {
                       {categories.map((cat) => (
                         <div
                           key={cat.id}
-                          className="flex items-center justify-between p-3 rounded-lg border bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 border-emerald-100 dark:border-emerald-900/20"
+                          className="flex items-center justify-between p-3 rounded-lg border bg-slate-50 dark:bg-slate-900/30 border-slate-200 dark:border-slate-800"
                         >
                           <div>
                             <p className="font-medium text-sm">{cat.name}</p>

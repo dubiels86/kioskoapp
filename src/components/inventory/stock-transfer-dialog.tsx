@@ -204,7 +204,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ArrowRightLeft className="h-5 w-5 text-teal-600" />
+            <ArrowRightLeft className="h-5 w-5 text-primary" />
             Transferir Stock
           </DialogTitle>
           <DialogDescription>
@@ -253,7 +253,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
           {fromWarehouse && toWarehouse && (
             <div className="flex items-center justify-center gap-2 py-2 text-sm">
               <span className="font-medium text-muted-foreground">{fromWarehouse.name}</span>
-              <ArrowRightLeft className="h-4 w-4 text-teal-600" />
+              <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-muted-foreground">{toWarehouse.name}</span>
             </div>
           )}
@@ -301,7 +301,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
 
           {/* Current stock info */}
           {selectedProduct && sourceStock !== null && (
-            <div className="rounded-lg border bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 p-3">
+            <div className="rounded-lg border bg-slate-50 dark:bg-slate-900/30 p-3">
               <p className="text-sm text-muted-foreground">
                 Stock de <span className="font-medium text-foreground">{selectedProduct.name}</span> en{' '}
                 <span className="font-medium text-foreground">{fromWarehouse?.name}</span>:
@@ -353,7 +353,7 @@ export function StockTransferDialog({ open, onOpenChange }: StockTransferDialogP
           <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false) }} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm">
             {saving ? 'Transfiriendo...' : 'Transferir'}
           </Button>
         </DialogFooter>

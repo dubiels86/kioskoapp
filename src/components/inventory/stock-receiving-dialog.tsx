@@ -187,7 +187,7 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <PackagePlus className="h-5 w-5 text-emerald-600" />
+            <PackagePlus className="h-5 w-5 text-primary" />
             Recibir Stock
           </DialogTitle>
           <DialogDescription>
@@ -248,7 +248,7 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
 
           {/* Current stock info */}
           {selectedProduct && destinationStock !== null && (
-            <div className="rounded-lg border bg-gradient-to-r from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10 p-3">
+            <div className="rounded-lg border bg-slate-50 dark:bg-slate-900/30 p-3">
               <p className="text-sm text-muted-foreground">
                 Stock de <span className="font-medium text-foreground">{selectedProduct.name}</span> en{' '}
                 <span className="font-medium text-foreground">{toWarehouse?.name}</span>:
@@ -294,7 +294,7 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
           <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false) }} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm">
             {saving ? 'Recibiendo...' : 'Recibir Stock'}
           </Button>
         </DialogFooter>

@@ -185,7 +185,7 @@ export function RolesTab() {
             </CardTitle>
             <CardDescription>Defina roles y permisos para el acceso al sistema</CardDescription>
           </div>
-          <Button onClick={openCreate} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm">
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 shadow-sm">
             <Plus className="h-4 w-4" />
             Nuevo Rol
           </Button>
@@ -354,7 +354,7 @@ export function RolesTab() {
             <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               {(createMutation.isPending || updateMutation.isPending) ? 'Guardando...' : editingRole ? 'Guardar Cambios' : 'Crear Rol'}
             </Button>

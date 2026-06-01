@@ -79,7 +79,7 @@ function PaymentDialogContent({
     <>
       <DialogHeader>
         <DialogTitle className="flex items-center gap-2">
-          <Icon className="w-5 h-5 text-emerald-600" />
+          <Icon className="w-5 h-5 text-primary" />
           Cobrar - {PAYMENT_METHOD_LABELS[selectedPaymentMethod]}
         </DialogTitle>
         <DialogDescription>
@@ -103,7 +103,7 @@ function PaymentDialogContent({
             <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Total
             </span>
-            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
               {formatCurrency(total)}
             </span>
           </div>
@@ -134,7 +134,7 @@ function PaymentDialogContent({
               />
             </div>
             {cashReceived && received >= total && (
-              <div className="mt-2 flex justify-between items-center bg-emerald-50 dark:bg-emerald-950/20 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
+              <div className="mt-2 flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
                 <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   Vuelto
                 </span>
@@ -177,7 +177,7 @@ function PaymentDialogContent({
         <Button
           onClick={onConfirm}
           disabled={!canConfirm || isProcessing}
-          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white min-w-[140px]"
+          className="bg-slate-800 hover:bg-slate-700 shadow-sm text-white min-w-[140px]"
         >
           {isProcessing ? (
             <span className="flex items-center gap-2">

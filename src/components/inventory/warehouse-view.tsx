@@ -248,7 +248,7 @@ function WarehouseFormDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
+          <Button onClick={handleSubmit} disabled={saving} className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm">
             {saving ? 'Guardando...' : isEditing ? 'Actualizar' : 'Crear Depósito'}
           </Button>
         </DialogFooter>
@@ -312,7 +312,7 @@ export function WarehouseView() {
     const label = WAREHOUSE_TYPE_LABELS[type as WarehouseType] || type
     switch (type) {
       case 'PRINCIPAL':
-        return <Badge className="bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 hover:bg-teal-100">{label}</Badge>
+        return <Badge className="bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300 hover:bg-slate-100">{label}</Badge>
       case 'VENTAS':
         return <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 hover:bg-amber-100">{label}</Badge>
       case 'SECUNDARIO':
@@ -334,7 +334,7 @@ export function WarehouseView() {
             setEditingWarehouse(null)
             setFormOpen(true)
           }}
-          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
+          className="bg-slate-800 hover:bg-slate-700 text-white shadow-sm gap-1.5"
         >
           <Plus className="h-4 w-4" />
           Nuevo Depósito

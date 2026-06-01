@@ -131,19 +131,19 @@ export function ProductGrid({ warehouseId }: ProductGridProps) {
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row gap-3 pb-4 shrink-0">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500/50" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
           <Input
             placeholder="Buscar por nombre o código..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
-            className="pl-9 h-11 bg-white dark:bg-slate-900 border-emerald-200/60 dark:border-emerald-900/30 focus:border-emerald-400 focus:ring-emerald-400/20"
+            className="pl-9 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:border-primary focus:ring-ring/20"
           />
         </div>
         <Select
           value={posCategoryFilter}
           onValueChange={setPosCategoryFilter}
         >
-          <SelectTrigger className="w-full sm:w-52 h-11 bg-white dark:bg-slate-900 border-emerald-200/60 dark:border-emerald-900/30">
+          <SelectTrigger className="w-full sm:w-52 h-11 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <SelectValue placeholder="Categoría" />
           </SelectTrigger>
           <SelectContent>
@@ -233,7 +233,7 @@ function ProductCard({
         ${
           isOutOfStock
             ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
-            : 'bg-white dark:bg-slate-900 border-emerald-100 dark:border-emerald-900/20 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg hover:shadow-emerald-500/8 hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-lg hover:scale-[1.02] cursor-pointer active:scale-[0.98]'
         }
       `}
     >
@@ -242,7 +242,7 @@ function ProductCard({
         {product.category && (
           <Badge
             variant="secondary"
-            className="text-[10px] px-1.5 py-0 h-5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-100 dark:border-emerald-900/30"
+            className="text-[10px] px-1.5 py-0 h-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700"
           >
             {product.category.name}
           </Badge>
@@ -265,7 +265,7 @@ function ProductCard({
       {/* Product Image & Name */}
       <div className="flex items-start gap-2.5 w-full mb-1">
         {/* Product Image Thumbnail */}
-        <div className="w-12 h-12 rounded-lg border border-emerald-100 dark:border-emerald-900/30 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 shrink-0 overflow-hidden flex items-center justify-center">
+        <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0 overflow-hidden flex items-center justify-center">
           {product.image ? (
             <Image
               src={product.image}
@@ -276,7 +276,7 @@ function ProductCard({
               unoptimized
             />
           ) : (
-            <ImageIcon className="w-5 h-5 text-emerald-300 dark:text-emerald-700" />
+            <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-700" />
           )}
         </div>
 
@@ -286,7 +286,7 @@ function ProductCard({
       </div>
 
       {/* Price */}
-      <p className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent mt-auto ml-0">
+      <p className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-auto ml-0">
         {formatCurrency(product.salePrice)}
       </p>
 
@@ -313,7 +313,7 @@ function ProductCard({
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/20 bg-white dark:bg-slate-900">
+    <div className="flex flex-col p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       <Skeleton className="h-5 w-16 mb-2" />
       <div className="flex items-start gap-2.5 mb-1">
         <Skeleton className="w-12 h-12 rounded-lg shrink-0" />

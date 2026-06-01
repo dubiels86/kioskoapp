@@ -85,7 +85,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-emerald-600" />
+            <Banknote className="w-5 h-5 text-primary" />
             Abrir Caja
           </DialogTitle>
           <DialogDescription>
@@ -101,7 +101,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
               size="sm"
               variant={useBreakdown ? 'default' : 'outline'}
               onClick={() => setUseBreakdown(true)}
-              className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
+              className={useBreakdown ? 'shadow-sm' : ''}
             >
               Conteo por Denominación
             </Button>
@@ -150,12 +150,12 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
 
           {/* Show the total that will be used */}
           {effectiveAmount > 0 && (
-            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3">
+            <div className="rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                <span className="text-sm font-medium text-slate-800 dark:text-slate-300">
                   Monto de Apertura
                 </span>
-                <span className="text-xl font-bold text-emerald-700 dark:text-emerald-400">
+                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                   {formatCurrency(effectiveAmount)}
                 </span>
               </div>
@@ -174,7 +174,7 @@ export function CashOpenDialog({ open, onOpenChange }: CashOpenDialogProps) {
           <Button
             onClick={handleSubmit}
             disabled={openRegisterMutation.isPending || effectiveAmount <= 0}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white"
+            className="bg-slate-800 hover:bg-slate-700 shadow-sm text-white"
           >
             {openRegisterMutation.isPending ? (
               <span className="flex items-center gap-2">

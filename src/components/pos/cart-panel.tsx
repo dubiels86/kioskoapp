@@ -41,8 +41,8 @@ const PAYMENT_METHODS: {
     value: 'EFECTIVO',
     label: PAYMENT_METHOD_LABELS.EFECTIVO,
     icon: Banknote,
-    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-600',
-    activeColor: 'border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 text-emerald-700 dark:text-emerald-400 shadow-sm shadow-emerald-500/10',
+    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600',
+    activeColor: 'border-slate-500 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm',
   },
   {
     value: 'TRANSFERENCIA',
@@ -90,18 +90,18 @@ export function CartPanel({
   const canProcess = !isCartEmpty && currentCashRegisterId !== null && !hasOutOfStockItem
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-950 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 overflow-hidden shadow-sm shadow-emerald-500/5">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
       {/* Cart Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-emerald-100 dark:border-emerald-900/30 shrink-0 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/20">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm shadow-emerald-500/20">
+          <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center shadow-sm">
             <ShoppingCart className="w-4 h-4 text-white" />
           </div>
           <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
             Carrito
           </h2>
           {cart.length > 0 && (
-            <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-0 h-6 min-w-6 flex items-center justify-center text-xs font-bold px-1.5">
+            <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-0 h-6 min-w-6 flex items-center justify-center text-xs font-bold px-1.5">
               {cart.length}
             </Badge>
           )}
@@ -158,7 +158,7 @@ export function CartPanel({
 
       {/* Cart Summary */}
       {!isCartEmpty && (
-        <div className="shrink-0 border-t border-emerald-100 dark:border-emerald-900/30 px-4 py-3 space-y-2">
+        <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Subtotal</span>
             <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -193,13 +193,13 @@ export function CartPanel({
             </div>
           </div>
 
-          <Separator className="bg-emerald-100 dark:bg-emerald-900/30" />
+          <Separator className="bg-slate-100 dark:bg-slate-800" />
 
           <div className="flex justify-between items-baseline">
             <span className="font-bold text-slate-900 dark:text-slate-100">
               Total
             </span>
-            <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+            <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
               {formatCurrency(total)}
             </span>
           </div>
@@ -216,7 +216,7 @@ export function CartPanel({
       )}
 
       {/* Payment Method Selection */}
-      <div className="shrink-0 border-t border-emerald-100 dark:border-emerald-900/30 px-4 py-3">
+      <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-4 py-3">
         <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
           Método de pago
         </p>
@@ -257,7 +257,7 @@ export function CartPanel({
         <Button
           onClick={onProcessSale}
           disabled={!canProcess || isProcessing}
-          className="w-full h-13 text-base font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl shadow-lg shadow-emerald-600/25 transition-all disabled:opacity-50 disabled:shadow-none"
+          className="w-full h-13 text-base font-bold bg-slate-800 hover:bg-slate-700 text-white rounded-xl shadow-lg transition-all disabled:opacity-50 disabled:shadow-none"
           size="lg"
         >
           {isProcessing ? (
@@ -294,10 +294,10 @@ function CartItemRow({
     <div className={`flex items-start gap-2 p-2.5 rounded-xl border group transition-colors ${
       isOutOfStock
         ? 'bg-rose-50/50 dark:bg-rose-950/10 border-rose-200 dark:border-rose-800'
-        : 'bg-gradient-to-r from-slate-50 to-emerald-50/30 dark:from-slate-900 dark:to-emerald-950/10 border-emerald-100 dark:border-emerald-900/20 hover:border-emerald-200 dark:hover:border-emerald-800/30'
+        : 'bg-gradient-to-r from-slate-50 to-slate-50 dark:from-slate-900 dark:to-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
     }`}>
       {/* Product Image */}
-      <div className="w-8 h-8 rounded-md border border-emerald-100 dark:border-emerald-900/30 bg-white dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
+      <div className="w-8 h-8 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 shrink-0 overflow-hidden flex items-center justify-center">
         {item.image ? (
           <Image
             src={item.image}
@@ -331,7 +331,7 @@ function CartItemRow({
         <Button
           variant="outline"
           size="icon"
-          className="h-7 w-7 rounded-lg border-emerald-200 dark:border-emerald-800/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900"
           onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
         >
           <Minus className="w-3 h-3" />
@@ -342,7 +342,7 @@ function CartItemRow({
         <Button
           variant="outline"
           size="icon"
-          className="h-7 w-7 rounded-lg border-emerald-200 dark:border-emerald-800/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          className="h-7 w-7 rounded-lg border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900"
           disabled={item.quantity >= item.stock}
           onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
         >
@@ -351,7 +351,7 @@ function CartItemRow({
       </div>
 
       <div className="flex flex-col items-end shrink-0">
-        <span className="text-sm font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+        <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
           {formatCurrency(item.subtotal)}
         </span>
         <Button

@@ -158,10 +158,10 @@ export function CashView() {
     return (
       <>
         <div className="flex items-center justify-center h-full min-h-[60vh]">
-          <Card className="w-full max-w-md border-emerald-100 dark:border-emerald-900/30 shadow-lg shadow-emerald-500/5">
+          <Card className="w-full max-w-md border-border shadow-sm">
             <CardContent className="flex flex-col items-center gap-6 py-10">
-              <div className="w-20 h-20 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-900/30">
-                <Banknote className="w-10 h-10 text-emerald-500/60" />
+              <div className="w-20 h-20 bg-muted rounded-2xl flex items-center justify-center border">
+                <Banknote className="w-10 h-10 text-muted-foreground" />
               </div>
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Caja Cerrada</h2>
@@ -172,7 +172,7 @@ export function CashView() {
               <Button
                 size="lg"
                 onClick={() => setOpenDialog(true)}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-2 shadow-lg shadow-emerald-600/20"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 shadow-sm"
               >
                 <Banknote className="w-5 h-5" />
                 Abrir Caja
@@ -183,10 +183,10 @@ export function CashView() {
 
         {history.length > 0 && (
           <div className="mt-8">
-            <Card className="border-emerald-100 dark:border-emerald-900/30">
+            <Card className="border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <History className="w-4 h-4 text-emerald-600" />
+                  <History className="w-4 h-4 text-primary" />
                   Últimas Cajas Cerradas
                 </CardTitle>
               </CardHeader>
@@ -243,11 +243,11 @@ export function CashView() {
       <div className="space-y-6">
         {/* Top summary cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/30 dark:to-teal-900/30 rounded-lg flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/30">
-                  <Wallet className="w-5 h-5 text-emerald-600" />
+                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center border">
+                  <Wallet className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Monto Apertura</p>
@@ -257,11 +257,11 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 rounded-lg flex items-center justify-center border border-emerald-200/50 dark:border-emerald-800/30">
-                  <Banknote className="w-5 h-5 text-emerald-600" />
+                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center border">
+                  <Banknote className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Ventas Efectivo</p>
@@ -272,7 +272,7 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card className="border-amber-100 dark:border-amber-900/30 shadow-sm shadow-amber-500/5">
+          <Card className="border-amber-100 dark:border-amber-900/30 shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 rounded-lg flex items-center justify-center border border-amber-200/50 dark:border-amber-800/30">
@@ -287,15 +287,15 @@ export function CashView() {
             </CardContent>
           </Card>
 
-          <Card className="border-teal-100 dark:border-teal-900/30 shadow-sm shadow-teal-500/5">
+          <Card className="border-border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-teal-900/30 dark:to-cyan-900/30 rounded-lg flex items-center justify-center border border-teal-200/50 dark:border-teal-800/30">
-                  <TrendingUp className="w-5 h-5 text-teal-600" />
+                <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center border">
+                  <TrendingUp className="w-5 h-5 text-slate-700 dark:text-slate-300" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Total Ventas</p>
-                  <p className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">{formatCurrency(totalVentas)}</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(totalVentas)}</p>
                   <p className="text-xs text-muted-foreground">{cashRegister.sales.length} ventas</p>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export function CashView() {
         {/* Sales by Payment Method + Cash Movements */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Sales by Payment Method */}
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Ventas por Método de Pago</CardTitle>
             </CardHeader>
@@ -335,11 +335,11 @@ export function CashView() {
           </Card>
 
           {/* Cash Movements */}
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Movimientos de Caja</CardTitle>
-                <Button size="sm" onClick={() => setMovementDialog(true)} className="gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm">
+                <Button size="sm" onClick={() => setMovementDialog(true)} className="gap-1 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm">
                   <Plus className="w-4 h-4" />
                   Registrar
                 </Button>
@@ -395,10 +395,10 @@ export function CashView() {
         </div>
 
         {/* Recent Sales */}
-        <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+        <Card className="border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="w-4 h-4 text-emerald-600" />
+              <Clock className="w-4 h-4 text-primary" />
               Ventas Recientes
             </CardTitle>
           </CardHeader>
@@ -423,7 +423,7 @@ export function CashView() {
                     {recentSales.map((sale, idx) => (
                       <TableRow
                         key={sale.id}
-                        className="cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20"
+                        className="cursor-pointer hover:bg-muted/50"
                         onClick={() => setSelectedSale(sale)}
                       >
                         <TableCell className="text-xs text-muted-foreground">{cashRegister.sales.length - idx}</TableCell>
@@ -464,10 +464,10 @@ export function CashView() {
 
         {/* Cash Register History */}
         {history.length > 0 && (
-          <Card className="border-emerald-100 dark:border-emerald-900/30 shadow-sm shadow-emerald-500/5">
+          <Card className="border-border shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <History className="w-4 h-4 text-emerald-600" />
+                <History className="w-4 h-4 text-primary" />
                 Últimas Cajas Cerradas
               </CardTitle>
             </CardHeader>

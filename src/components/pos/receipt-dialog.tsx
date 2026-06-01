@@ -62,7 +62,7 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-emerald-600" />
+            <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             Venta Procesada
           </DialogTitle>
           <DialogDescription>
@@ -155,7 +155,7 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
               )}
               <div className="flex justify-between font-bold text-base">
                 <span className="text-slate-900 dark:text-slate-100">Total</span>
-                <span className="text-emerald-600 dark:text-emerald-400">
+                <span className="text-slate-900 dark:text-slate-100">
                   {formatCurrency(sale.total)}
                 </span>
               </div>
@@ -197,7 +197,7 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
           </Button>
           <Button
             onClick={() => onOpenChange(false)}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm text-white"
+            className="bg-slate-800 hover:bg-slate-700 shadow-sm text-white"
           >
             Cerrar
           </Button>

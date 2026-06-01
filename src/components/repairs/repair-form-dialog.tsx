@@ -198,7 +198,7 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-emerald-600" />
+            <Wrench className="w-5 h-5 text-primary" />
             {isEditing ? 'Editar Reparación' : 'Nueva Reparación'}
           </DialogTitle>
           <DialogDescription>
@@ -527,7 +527,7 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
             <Button
               type="submit"
               disabled={isPending}
-              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
             >
               {isPending
                 ? 'Guardando...'

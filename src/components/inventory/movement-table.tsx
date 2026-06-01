@@ -65,7 +65,7 @@ function getMovementBadgeVariant(type: MovementType) {
     case 'MERMA':
       return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 hover:bg-orange-100'
     case 'TRANSFERENCIA':
-      return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 hover:bg-teal-100'
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800/50 dark:text-slate-300 hover:bg-slate-100'
     default:
       return ''
   }
@@ -188,7 +188,7 @@ export function MovementTable() {
                     {movement.type === 'TRANSFERENCIA' && movement.fromWarehouse && movement.toWarehouse ? (
                       <span className="text-xs flex items-center gap-1 whitespace-nowrap">
                         <span className="text-muted-foreground">{movement.fromWarehouse.name}</span>
-                        <ArrowRight className="h-3 w-3 text-teal-500 shrink-0" />
+                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                         <span className="text-muted-foreground">{movement.toWarehouse.name}</span>
                       </span>
                     ) : movement.toWarehouse ? (

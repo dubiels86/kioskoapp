@@ -139,7 +139,7 @@ export function RepairsView() {
           </div>
           <Button
             onClick={() => { setEditingRepair(null); setFormDialog(true) }}
-            className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm"
+            className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Nueva Reparación
@@ -161,7 +161,7 @@ export function RepairsView() {
         {filteredRepairs.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-muted border rounded-2xl flex items-center justify-center mb-4">
                 <Wrench className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -179,7 +179,7 @@ export function RepairsView() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredRepairs.map((repair) => (
-              <Card key={repair.id} className="hover:shadow-md hover:shadow-emerald-500/5 transition-shadow">
+              <Card key={repair.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4 space-y-3">
                   {/* Header */}
                   <div className="flex items-start justify-between gap-2">
@@ -214,7 +214,7 @@ export function RepairsView() {
                       <Clock className="w-3 h-3" />
                       {formatDate(repair.receivedAt)}
                     </div>
-                    <span className="font-semibold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                    <span className="font-semibold text-sm text-primary">
                       {formatCurrency(repair.totalCost)}
                     </span>
                   </div>

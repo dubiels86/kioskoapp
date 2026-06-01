@@ -147,7 +147,7 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Banknote className="w-5 h-5 text-emerald-600" />
+            <Banknote className="w-5 h-5 text-primary" />
             Cerrar Caja
           </DialogTitle>
           <DialogDescription>
@@ -243,7 +243,6 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
                 size="sm"
                 variant={useBreakdown ? 'default' : 'outline'}
                 onClick={() => setUseBreakdown(true)}
-                className={useBreakdown ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : ''}
               >
                 Conteo por Denominación
               </Button>

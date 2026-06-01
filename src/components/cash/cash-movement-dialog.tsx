@@ -137,7 +137,7 @@ export function CashMovementDialog({ open, onOpenChange, cashRegisterId }: CashM
             <Button
               type="submit"
               disabled={mutation.isPending || !amount || !reason}
-              className={type === 'ENTRADA' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm' : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 shadow-sm'}
+              className={type === 'ENTRADA' ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm' : 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 shadow-sm'}
             >
               {mutation.isPending ? 'Registrando...' : 'Registrar'}
             </Button>

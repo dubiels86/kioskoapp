@@ -33,7 +33,7 @@ export function AppHeader() {
         <Button
           variant="ghost"
           size="icon"
-          className="shrink-0 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          className="shrink-0 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           onClick={() => setSheetOpen(true)}
           aria-label="Abrir menú"
         >
@@ -46,7 +46,7 @@ export function AppHeader() {
 
       {/* Mobile sidebar sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="p-0 w-60 bg-gradient-to-b from-emerald-950 via-emerald-900 to-teal-900 border-none">
+        <SheetContent side="left" className="p-0 w-60 bg-slate-900 border-none">
           <SheetHeader className="sr-only">
             <SheetTitle>Menú de navegación</SheetTitle>
           </SheetHeader>

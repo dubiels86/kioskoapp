@@ -106,7 +106,7 @@ export function PurchasesView() {
         <div className="flex gap-2 flex-wrap">
           <Button
             onClick={() => setNewPurchaseOpen(true)}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm gap-1.5"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm gap-1.5"
           >
             <Plus className="h-4 w-4" />
             Nueva Compra
@@ -134,7 +134,7 @@ export function PurchasesView() {
       </div>
 
       {/* Purchases table */}
-      <div className="rounded-md border border-emerald-100 dark:border-emerald-900/30 bg-white dark:bg-slate-950 shadow-sm shadow-emerald-500/5 overflow-x-auto">
+      <div className="rounded-md border border-border bg-white dark:bg-slate-950 shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

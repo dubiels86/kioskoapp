@@ -157,10 +157,10 @@ export function DenominationsTab() {
                 {bills.map((bill) => (
                   <div
                     key={bill.value}
-                    className="flex items-center gap-2 rounded-lg border bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 px-3 py-2.5"
+                    className="flex items-center gap-2 rounded-lg border bg-slate-50 border-slate-200 dark:bg-slate-800 dark:border-slate-700 px-3 py-2.5"
                   >
-                    <Banknote className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400 flex-1">
+                    <Banknote className="h-4 w-4 text-slate-600 dark:text-slate-400 shrink-0" />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300 flex-1">
                       {bill.label}
                     </span>
                     <Button
@@ -240,7 +240,7 @@ export function DenominationsTab() {
             <Separator />
 
             {/* Summary */}
-            <div className="rounded-lg bg-gradient-to-r from-emerald-50/30 to-teal-50/20 dark:from-emerald-950/10 dark:to-teal-950/10 p-4">
+            <div className="rounded-lg bg-muted/50 p-4">
               <p className="text-sm font-semibold text-muted-foreground mb-2">Resumen de denominaciones</p>
               <div className="flex gap-4 text-sm">
                 <span>{bills.length} billete{bills.length !== 1 ? 's' : ''}</span>
@@ -252,7 +252,7 @@ export function DenominationsTab() {
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 gap-1.5 shadow-sm"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 shadow-sm"
               >
                 <Save className="h-4 w-4" />
                 {saveMutation.isPending ? 'Guardando...' : 'Guardar Denominaciones'}
