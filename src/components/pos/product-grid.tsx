@@ -172,7 +172,7 @@ export function ProductGrid({ warehouseId }: ProductGridProps) {
         <ScrollArea className="flex-1 -mx-1">
           <div className="px-1">
             {isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <ProductCardSkeleton key={i} />
                 ))}
@@ -186,7 +186,7 @@ export function ProductGrid({ warehouseId }: ProductGridProps) {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-2">
                 {products.map((product) => (
                   <ProductCard
                     key={product.id}
@@ -236,41 +236,41 @@ function ProductCard({
         }
       `}
     >
-      {/* Large Image Area */}
-      <div className="relative w-full aspect-square bg-slate-50 dark:bg-slate-800 overflow-hidden">
+      {/* Image Area */}
+      <div className="relative w-full aspect-[4/3] bg-slate-50 dark:bg-slate-800 overflow-hidden">
         {product.image ? (
           <img
             src={product.image}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+            <ImageIcon className="w-7 h-7 text-slate-200 dark:text-slate-700" />
           </div>
         )}
 
         {/* Out of stock overlay */}
         {isOutOfStock && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+            <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
               Agotado
             </span>
           </div>
         )}
 
         {/* Badges over image */}
-        <div className="absolute top-2 left-2 flex items-center gap-1 flex-wrap">
+        <div className="absolute top-1 left-1 flex items-center gap-0.5 flex-wrap">
           {product.category && (
             <Badge
               variant="secondary"
-              className="text-[10px] px-1.5 py-0 h-5 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 font-medium backdrop-blur-sm border-0 shadow-sm"
+              className="text-[9px] px-1 py-0 h-4 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 font-medium backdrop-blur-sm border-0 shadow-sm"
             >
               {product.category.name}
             </Badge>
           )}
           {isLowStock && (
-            <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-500/90 text-white border-0 shadow-sm backdrop-blur-sm">
+            <Badge className="text-[9px] px-1 py-0 h-4 bg-amber-500/90 text-white border-0 shadow-sm backdrop-blur-sm">
               Bajo stock
             </Badge>
           )}
@@ -278,26 +278,26 @@ function ProductCard({
 
         {/* Stock dot */}
         {!isOutOfStock && (
-          <div className="absolute top-2 right-2">
-            <span className={`flex h-3 w-3 rounded-full border-2 border-white shadow-sm ${
+          <div className="absolute top-1 right-1">
+            <span className={`flex h-2.5 w-2.5 rounded-full border-2 border-white shadow-sm ${
               isLowStock ? 'bg-amber-400' : 'bg-emerald-400'
             }`} />
           </div>
         )}
       </div>
 
-      {/* Info strip at bottom */}
-      <div className="p-2.5 space-y-0.5">
-        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 leading-tight line-clamp-2">
+      {/* Info at bottom */}
+      <div className="p-1.5 space-y-0">
+        <h3 className="font-medium text-xs text-slate-800 dark:text-slate-100 leading-tight line-clamp-1">
           {product.name}
         </h3>
         <div className="flex items-center justify-between">
-          <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+          <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
             {formatCurrency(product.salePrice)}
           </p>
           {!isOutOfStock && (
-            <span className="text-[10px] text-slate-400 dark:text-slate-500">
-              {displayStock} disp.
+            <span className="text-[9px] text-slate-400 dark:text-slate-500">
+              {displayStock}
             </span>
           )}
         </div>
@@ -309,12 +309,12 @@ function ProductCard({
 function ProductCardSkeleton() {
   return (
     <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-      <Skeleton className="w-full aspect-square" />
-      <div className="p-2.5 space-y-1">
-        <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="w-full aspect-[4/3]" />
+      <div className="p-1.5 space-y-0.5">
+        <Skeleton className="h-3 w-3/4" />
         <div className="flex items-center justify-between">
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-2.5 w-6" />
         </div>
       </div>
     </div>
