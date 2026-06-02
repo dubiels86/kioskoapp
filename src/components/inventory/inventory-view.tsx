@@ -49,6 +49,7 @@ import {
   Warehouse as WarehouseIcon,
   Expand,
   PackagePlus,
+  Camera,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
@@ -58,6 +59,7 @@ import { MovementTable } from './movement-table'
 import { WarehouseView } from './warehouse-view'
 import { StockTransferDialog } from './stock-transfer-dialog'
 import { StockReceivingDialog } from './stock-receiving-dialog'
+import { ProductImageDialog } from './product-image-dialog'
 
 interface Category {
   id: string
@@ -118,6 +120,8 @@ export function InventoryView() {
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [receivingDialogOpen, setReceivingDialogOpen] = useState(false)
+  const [imageDialogOpen, setImageDialogOpen] = useState(false)
+  const [imageProduct, setImageProduct] = useState<Product | null>(null)
 
   // Stock expansion
   const [expandedStock, setExpandedStock] = useState<string | null>(null)
@@ -395,19 +399,34 @@ export function InventoryView() {
                         className={`cursor-pointer ${!product.isActive ? 'opacity-60' : ''}`}
                         onClick={() => setExpandedStock(expandedStock === product.id ? null : product.id)}
                       >
-                        {/* Image thumbnail */}
+                        {/* Image thumbnail - clickable to update */}
                         <TableCell>
-                          {product.image ? (
-                            <img
-                              src={product.image}
-                              alt={product.name}
-                              className="w-10 h-10 rounded-md object-cover border"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                              <Package className="h-5 w-5 text-muted-foreground/40" />
-                            </div>
-                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setImageProduct(product)
+                              setImageDialogOpen(true)
+                            }}
+                            className="relative group/thumb block"
+                          >
+                            {product.image ? (
+                              <div className="relative">
+                                <img
+                                  src={product.image}
+                                  alt={product.name}
+                                  className="w-10 h-10 rounded-md object-cover border"
+                                />
+                                <div className="absolute inset-0 rounded-md bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                  <Camera className="h-4 w-4 text-white" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-md bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover/thumb:bg-slate-200 dark:group-hover/thumb:bg-slate-700 transition-colors">
+                                <Camera className="h-4 w-4 text-muted-foreground/40 group-hover/thumb:text-muted-foreground/70 transition-colors" />
+                              </div>
+                            )}
+                          </button>
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-1.5">
@@ -654,6 +673,13 @@ export function InventoryView() {
       <StockReceivingDialog
         open={receivingDialogOpen}
         onOpenChange={setReceivingDialogOpen}
+      />
+
+      {/* Product Image Dialog */}
+      <ProductImageDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        product={imageProduct}
       />
 
       {/* Stock Transfer Dialog */}
