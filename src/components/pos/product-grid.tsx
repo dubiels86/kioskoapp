@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/select'
 import { Search, Package, ImageIcon } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
 
 interface Product {
   id: string
@@ -229,7 +228,7 @@ function ProductCard({
       onClick={() => onAdd(product)}
       disabled={isOutOfStock}
       className={`
-        group relative flex flex-col items-start p-3 rounded-xl border transition-all duration-200 text-left
+        group relative flex flex-col rounded-xl border transition-all duration-200 text-left overflow-hidden
         ${
           isOutOfStock
             ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
@@ -237,75 +236,71 @@ function ProductCard({
         }
       `}
     >
-      {/* Badges */}
-      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-        {product.category && (
-          <Badge
-            variant="secondary"
-            className="text-[10px] px-1.5 py-0 h-5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium border border-slate-200 dark:border-slate-700"
-          >
-            {product.category.name}
-          </Badge>
+      {/* Large Image Area */}
+      <div className="relative w-full aspect-square bg-slate-50 dark:bg-slate-800 overflow-hidden">
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ImageIcon className="w-10 h-10 text-slate-200 dark:text-slate-700" />
+          </div>
         )}
-        {isOutOfStock && (
-          <Badge
-            variant="destructive"
-            className="text-[10px] px-1.5 py-0 h-5 bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-800/30"
-          >
-            Agotado
-          </Badge>
-        )}
-        {isLowStock && (
-          <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30">
-            Bajo stock
-          </Badge>
-        )}
-      </div>
 
-      {/* Product Image & Name */}
-      <div className="flex items-start gap-2.5 w-full mb-1">
-        {/* Product Image Thumbnail */}
-        <div className="w-12 h-12 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shrink-0 overflow-hidden flex items-center justify-center">
-          {product.image ? (
-            <Image
-              src={product.image}
-              alt={product.name}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
-              unoptimized
-            />
-          ) : (
-            <ImageIcon className="w-5 h-5 text-slate-300 dark:text-slate-700" />
+        {/* Out of stock overlay */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="bg-rose-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+              Agotado
+            </span>
+          </div>
+        )}
+
+        {/* Badges over image */}
+        <div className="absolute top-2 left-2 flex items-center gap-1 flex-wrap">
+          {product.category && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] px-1.5 py-0 h-5 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 font-medium backdrop-blur-sm border-0 shadow-sm"
+            >
+              {product.category.name}
+            </Badge>
+          )}
+          {isLowStock && (
+            <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-500/90 text-white border-0 shadow-sm backdrop-blur-sm">
+              Bajo stock
+            </Badge>
           )}
         </div>
 
-        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 flex-1">
-          {product.name}
-        </h3>
+        {/* Stock dot */}
+        {!isOutOfStock && (
+          <div className="absolute top-2 right-2">
+            <span className={`flex h-3 w-3 rounded-full border-2 border-white shadow-sm ${
+              isLowStock ? 'bg-amber-400' : 'bg-emerald-400'
+            }`} />
+          </div>
+        )}
       </div>
 
-      {/* Price */}
-      <p className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-auto ml-0">
-        {formatCurrency(product.salePrice)}
-      </p>
-
-      {/* Stock indicator */}
-      <div className="flex items-center gap-1.5 mt-2">
-        <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            isOutOfStock
-              ? 'bg-rose-400'
-              : isLowStock
-                ? 'bg-amber-400'
-                : 'bg-emerald-400'
-          }`}
-        />
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          {isOutOfStock
-            ? 'Sin stock'
-            : `${displayStock} ${displayStock === 1 ? product.unit : product.unit + 's'}`}
-        </span>
+      {/* Info strip at bottom */}
+      <div className="p-2.5 space-y-0.5">
+        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-100 leading-tight line-clamp-2">
+          {product.name}
+        </h3>
+        <div className="flex items-center justify-between">
+          <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+            {formatCurrency(product.salePrice)}
+          </p>
+          {!isOutOfStock && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+              {displayStock} disp.
+            </span>
+          )}
+        </div>
       </div>
     </button>
   )
@@ -313,17 +308,15 @@ function ProductCard({
 
 function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <Skeleton className="h-5 w-16 mb-2" />
-      <div className="flex items-start gap-2.5 mb-1">
-        <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
-        <div className="flex-1">
-          <Skeleton className="h-4 w-full mb-1" />
-          <Skeleton className="h-4 w-2/3" />
+    <div className="flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+      <Skeleton className="w-full aspect-square" />
+      <div className="p-2.5 space-y-1">
+        <Skeleton className="h-4 w-3/4" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-5 w-20" />
+          <Skeleton className="h-3 w-10" />
         </div>
       </div>
-      <Skeleton className="h-7 w-24 mb-2 mt-2" />
-      <Skeleton className="h-3 w-20" />
     </div>
   )
 }
