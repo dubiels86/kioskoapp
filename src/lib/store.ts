@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { AppView, CartItem, PaymentMethod } from '@/lib/types';
 
+export type PosType = 'kiosko' | 'cafeteria';
+
 interface AppState {
   // Navigation
   activeView: AppView;
@@ -18,6 +20,14 @@ interface AppState {
   // Payment
   selectedPaymentMethod: PaymentMethod;
   setSelectedPaymentMethod: (method: PaymentMethod) => void;
+
+  // POS Mode
+  posType: PosType;
+  setPosType: (type: PosType) => void;
+  posTables: number;
+  setPosTables: (count: number) => void;
+  selectedTable: number | null;
+  setSelectedTable: (table: number | null) => void;
 
   // POS Search
   posSearch: string;
@@ -94,6 +104,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Payment
   selectedPaymentMethod: 'EFECTIVO',
   setSelectedPaymentMethod: (method) => set({ selectedPaymentMethod: method }),
+
+  // POS Mode
+  posType: 'kiosko',
+  setPosType: (type) => set({ posType: type, selectedTable: type === 'kiosko' ? null : get().selectedTable }),
+  posTables: 10,
+  setPosTables: (count) => set({ posTables: count }),
+  selectedTable: null,
+  setSelectedTable: (table) => set({ selectedTable: table }),
 
   // POS Search
   posSearch: '',

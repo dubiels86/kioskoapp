@@ -7,8 +7,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { Store, Save } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Store, Save, Coffee, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAppStore } from '@/lib/store'
+import type { PosType } from '@/lib/store'
 
 function parseGeneralSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined) {
   const result = { name: '', address: '', phone: '', prefix: 'FAC', nextNumber: '1' }
@@ -28,8 +37,24 @@ function parseGeneralSettings(settings: Record<string, { key: string; value: str
   return result
 }
 
+function parsePosSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined) {
+  const result = { posType: 'kiosko' as PosType, posTables: 10 }
+  if (!settings?.pos) return result
+  for (const s of settings.pos) {
+    try {
+      const val = JSON.parse(s.value)
+      if (s.key === 'pos_type') result.posType = val === 'cafeteria' ? 'cafeteria' : 'kiosko'
+      if (s.key === 'pos_tables') result.posTables = typeof val === 'number' ? val : parseInt(val) || 10
+    } catch {
+      // ignore
+    }
+  }
+  return result
+}
+
 export function GeneralTab() {
   const queryClient = useQueryClient()
+  const { setPosType, setPosTables } = useAppStore()
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -41,12 +66,15 @@ export function GeneralTab() {
   })
 
   const parsed = useMemo(() => parseGeneralSettings(settings), [settings])
+  const parsedPos = useMemo(() => parsePosSettings(settings), [settings])
 
   const [businessName, setBusinessName] = useState(parsed.name)
   const [businessAddress, setBusinessAddress] = useState(parsed.address)
   const [businessPhone, setBusinessPhone] = useState(parsed.phone)
   const [invoicePrefix, setInvoicePrefix] = useState(parsed.prefix)
   const [invoiceNextNumber, setInvoiceNextNumber] = useState(parsed.nextNumber)
+  const [posType, setPosTypeLocal] = useState<PosType>(parsedPos.posType)
+  const [posTables, setPosTablesLocal] = useState(String(parsedPos.posTables))
 
   // Sync from query data
   const [prevName, setPrevName] = useState(parsed.name)
@@ -54,12 +82,16 @@ export function GeneralTab() {
   const [prevPhone, setPrevPhone] = useState(parsed.phone)
   const [prevPrefix, setPrevPrefix] = useState(parsed.prefix)
   const [prevNum, setPrevNum] = useState(parsed.nextNumber)
+  const [prevPosType, setPrevPosType] = useState(parsedPos.posType)
+  const [prevPosTables, setPrevPosTables] = useState(String(parsedPos.posTables))
 
   if (parsed.name !== prevName) { setBusinessName(parsed.name); setPrevName(parsed.name) }
   if (parsed.address !== prevAddr) { setBusinessAddress(parsed.address); setPrevAddr(parsed.address) }
   if (parsed.phone !== prevPhone) { setBusinessPhone(parsed.phone); setPrevPhone(parsed.phone) }
   if (parsed.prefix !== prevPrefix) { setInvoicePrefix(parsed.prefix); setPrevPrefix(parsed.prefix) }
   if (parsed.nextNumber !== prevNum) { setInvoiceNextNumber(parsed.nextNumber); setPrevNum(parsed.nextNumber) }
+  if (parsedPos.posType !== prevPosType) { setPosTypeLocal(parsedPos.posType); setPrevPosType(parsedPos.posType) }
+  if (String(parsedPos.posTables) !== prevPosTables) { setPosTablesLocal(String(parsedPos.posTables)); setPrevPosTables(String(parsedPos.posTables)) }
 
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
@@ -76,7 +108,11 @@ export function GeneralTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] })
-      toast.success('Configuración general guardada correctamente')
+      // Sync store with new settings
+      setPosType(posType)
+      const tables = parseInt(posTables) || 10
+      setPosTables(tables)
+      toast.success('Configuración guardada correctamente')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -87,6 +123,11 @@ export function GeneralTab() {
       toast.error('El número de factura debe ser un número positivo')
       return
     }
+    const tables = parseInt(posTables)
+    if (posType === 'cafeteria' && (isNaN(tables) || tables < 1)) {
+      toast.error('La cantidad de mesas debe ser un número positivo')
+      return
+    }
 
     saveMutation.mutate({
       business_name: JSON.stringify(businessName),
@@ -94,6 +135,8 @@ export function GeneralTab() {
       business_phone: JSON.stringify(businessPhone),
       invoice_prefix: JSON.stringify(invoicePrefix),
       invoice_next_number: JSON.stringify(nextNum),
+      pos_type: JSON.stringify(posType),
+      pos_tables: JSON.stringify(tables || 10),
     })
   }
 
@@ -104,7 +147,7 @@ export function GeneralTab() {
           <Store className="h-5 w-5" />
           Configuración General
         </CardTitle>
-        <CardDescription>Datos del negocio y configuración de facturación</CardDescription>
+        <CardDescription>Datos del negocio, tipo de POS y facturación</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {isLoading ? (
@@ -142,6 +185,78 @@ export function GeneralTab() {
                   onChange={(e) => setBusinessAddress(e.target.value)}
                   placeholder="Av. Siempre Viva 742"
                 />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* POS Mode Config */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Modo de POS</Label>
+              <p className="text-sm text-muted-foreground">
+                Elegí el tipo de negocio. En modo <strong>Cafetería</strong> las facturas se asocian a mesas.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* POS Type Selector */}
+                <div className="space-y-3">
+                  <Label>Tipo de POS</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPosTypeLocal('kiosko')}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        posType === 'kiosko'
+                          ? 'border-slate-500 bg-slate-50 dark:bg-slate-800 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      <ShoppingBag className={`w-7 h-7 ${posType === 'kiosko' ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`} />
+                      <span className={`text-sm font-semibold ${posType === 'kiosko' ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500'}`}>
+                        Kiosko
+                      </span>
+                      <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                        Venta directa sin mesas
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPosTypeLocal('cafeteria')}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        posType === 'cafeteria'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 shadow-sm'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-amber-300'
+                      }`}
+                    >
+                      <Coffee className={`w-7 h-7 ${posType === 'cafeteria' ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`} />
+                      <span className={`text-sm font-semibold ${posType === 'cafeteria' ? 'text-amber-900 dark:text-amber-100' : 'text-slate-500'}`}>
+                        Cafetería
+                      </span>
+                      <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                        Facturas por mesa
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tables count - only for cafeteria */}
+                <div className="space-y-3">
+                  <Label htmlFor="pos-tables">Cantidad de Mesas</Label>
+                  <Input
+                    id="pos-tables"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={posTables}
+                    onChange={(e) => setPosTablesLocal(e.target.value)}
+                    disabled={posType !== 'cafeteria'}
+                    className={posType === 'cafeteria' ? '' : 'opacity-50'}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {posType === 'cafeteria'
+                      ? `Se crearán ${parseInt(posTables) || 10} mesas para asignar a las facturas`
+                      : 'Solo disponible en modo Cafetería'}
+                  </p>
+                </div>
               </div>
             </div>
 

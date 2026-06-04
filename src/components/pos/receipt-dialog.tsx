@@ -1,7 +1,7 @@
 'use client'
 
 import { formatCurrency } from '@/lib/format'
-import { PAYMENT_METHOD_LABELS } from '@/lib/types'
+import { PAYMENT_METHOD_LABELS, normalizePaymentMethod } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,13 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Printer, Check } from 'lucide-react'
+import { Printer, Check, Coffee } from 'lucide-react'
+
+interface SalePaymentData {
+  id: string
+  method: string
+  amount: number
+}
 
 interface SaleData {
   id: string
@@ -22,10 +28,12 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
+  tableNumber?: number | null
   customerName?: string | null
   notes?: string | null
   createdAt: string
   items: SaleItemData[]
+  payments?: SalePaymentData[]
 }
 
 interface SaleItemData {
@@ -98,10 +106,26 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
                   {formattedDate}
                 </span>
               </div>
+              {sale.tableNumber && (
+                <div className="flex justify-between">
+                  <span className="text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                    <Coffee className="w-3 h-3" />
+                    Mesa
+                  </span>
+                  <span className="font-bold text-amber-700 dark:text-amber-400">
+                    #{sale.tableNumber}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-500">Pago</span>
                 <span className="text-slate-900 dark:text-slate-100">
-                  {PAYMENT_METHOD_LABELS[sale.paymentMethod as keyof typeof PAYMENT_METHOD_LABELS] || sale.paymentMethod}
+                  {sale.payments && sale.payments.length > 0
+                    ? sale.payments.map((p) =>
+                        `${PAYMENT_METHOD_LABELS[normalizePaymentMethod(p.method)] || p.method}: ${formatCurrency(p.amount)}`
+                      ).join(' + ')
+                    : PAYMENT_METHOD_LABELS[normalizePaymentMethod(sale.paymentMethod)] || sale.paymentMethod
+                  }
                 </span>
               </div>
               {sale.customerName && (

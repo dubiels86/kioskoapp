@@ -10,14 +10,18 @@ import { CashCloseDialog } from '@/components/pos/cash-close-dialog'
 import { PaymentDialog } from '@/components/pos/payment-dialog'
 import { ReceiptDialog } from '@/components/pos/receipt-dialog'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Lock,
   Unlock,
   Warehouse,
+  Coffee,
+  ArrowLeft,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
-import type { WarehouseType } from '@/lib/types'
+import type { WarehouseType, PaymentEntry } from '@/lib/types'
+import type { PosType } from '@/lib/store'
 
 interface CashRegisterData {
   id: string
@@ -30,6 +34,12 @@ interface CashRegisterData {
   openedAt: string
 }
 
+interface SalePaymentData {
+  id: string
+  method: string
+  amount: number
+}
+
 interface SaleData {
   id: string
   invoiceNumber: string
@@ -38,7 +48,10 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
+  tableNumber: number | null
+  customerName?: string | null
   items: SaleItemData[]
+  payments: SalePaymentData[]
   createdAt: string
 }
 
@@ -75,6 +88,21 @@ interface WarehouseData {
   }
 }
 
+function parsePosTypeFromSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined): { posType: PosType; posTables: number } {
+  const result = { posType: 'kiosko' as PosType, posTables: 10 }
+  if (!settings?.pos) return result
+  for (const s of settings.pos) {
+    try {
+      const val = JSON.parse(s.value)
+      if (s.key === 'pos_type') result.posType = val === 'cafeteria' ? 'cafeteria' : 'kiosko'
+      if (s.key === 'pos_tables') result.posTables = typeof val === 'number' ? val : parseInt(val) || 10
+    } catch {
+      // ignore
+    }
+  }
+  return result
+}
+
 export function POSView() {
   const {
     cart,
@@ -85,6 +113,12 @@ export function POSView() {
     cartSubtotal,
     selectedWarehouseId,
     setSelectedWarehouseId,
+    posType,
+    setPosType,
+    posTables,
+    setPosTables,
+    selectedTable,
+    setSelectedTable,
   } = useAppStore()
 
   const queryClient = useQueryClient()
@@ -95,6 +129,25 @@ export function POSView() {
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false)
   const [lastSale, setLastSale] = useState<SaleData | null>(null)
   const [discount, setDiscount] = useState(0)
+
+  // Fetch settings for POS type
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error cargando configuración')
+      return res.json() as Record<string, { key: string; value: string; label: string }[]>
+    },
+  })
+
+  // Sync POS settings from server to store
+  const parsedPos = useMemo(() => parsePosTypeFromSettings(settings), [settings])
+  useEffect(() => {
+    if (parsedPos.posType !== posType) setPosType(parsedPos.posType)
+    if (parsedPos.posTables !== posTables) setPosTables(parsedPos.posTables)
+  }, [parsedPos, posType, posTables, setPosType, setPosTables])
+
+  const isCafeteria = posType === 'cafeteria'
 
   // Fetch warehouses
   const { data: warehouses = [] } = useQuery<WarehouseData[]>({
@@ -113,7 +166,6 @@ export function POSView() {
       if (ventasWarehouse) {
         setSelectedWarehouseId(ventasWarehouse.id)
       } else {
-        // Fallback to first active warehouse
         setSelectedWarehouseId(warehouses[0].id)
       }
     }
@@ -139,9 +191,14 @@ export function POSView() {
     }
   }, [cashRegister, setCurrentCashRegisterId])
 
+  // Process sale with payments
+  const handleProcessSale = (payments: PaymentEntry[], customerName: string) => {
+    processSaleMutation.mutate({ payments, customerName })
+  }
+
   // Process sale mutation
   const processSaleMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async ({ payments, customerName }: { payments: PaymentEntry[]; customerName: string }) => {
       if (!currentCashRegisterId) {
         throw new Error('No hay una caja abierta')
       }
@@ -151,20 +208,31 @@ export function POSView() {
       if (!selectedWarehouseId) {
         throw new Error('No se pudo determinar el depósito de ventas')
       }
+      if (isCafeteria && !selectedTable) {
+        throw new Error('Seleccioná una mesa para la venta')
+      }
 
       const subtotal = cartSubtotal()
       if (discount > subtotal) {
         throw new Error('El descuento no puede superar el subtotal')
       }
 
+      // Determine primary payment method
+      const primaryMethod = payments.length === 1
+        ? payments[0].method
+        : 'MIXTO'
+
       const res = await fetch('/api/sales', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cashRegisterId: currentCashRegisterId,
-          paymentMethod: selectedPaymentMethod,
+          paymentMethod: primaryMethod,
           discount,
           warehouseId: selectedWarehouseId,
+          customerName: customerName || undefined,
+          tableNumber: isCafeteria ? selectedTable : undefined,
+          payments: payments.map((p) => ({ method: p.method, amount: p.amount })),
           items: cart.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -186,6 +254,7 @@ export function POSView() {
       setReceiptDialogOpen(true)
       clearCart()
       setDiscount(0)
+      // In cafeteria mode, keep the table selected for convenience
       queryClient.invalidateQueries({ queryKey: ['products'] })
       queryClient.invalidateQueries({ queryKey: ['cash-register'] })
     },
@@ -204,6 +273,10 @@ export function POSView() {
     if (cart.length === 0) return
     if (!selectedWarehouseId) {
       toast.error('No se pudo determinar el depósito de ventas')
+      return
+    }
+    if (isCafeteria && !selectedTable) {
+      toast.error('Seleccioná una mesa primero')
       return
     }
     setPaymentDialogOpen(true)
@@ -237,6 +310,53 @@ export function POSView() {
               </span>
             )}
           </div>
+
+          {/* Table Selector - only in cafeteria mode */}
+          {isCafeteria && (
+            <div className="px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                    Mesa
+                  </span>
+                  {selectedTable && (
+                    <span className="text-lg font-bold text-amber-800 dark:text-amber-300">
+                      #{selectedTable}
+                    </span>
+                  )}
+                </div>
+                {selectedTable && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTable(null)}
+                    className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-950/30"
+                  >
+                    <ArrowLeft className="w-3 h-3 mr-1" />
+                    Quitar
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="max-h-24">
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from({ length: posTables }, (_, i) => i + 1).map((tableNum) => (
+                    <button
+                      key={tableNum}
+                      onClick={() => setSelectedTable(tableNum === selectedTable ? null : tableNum)}
+                      className={`min-w-[36px] h-8 rounded-lg text-xs font-bold transition-all border ${
+                        tableNum === selectedTable
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                          : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/30'
+                      }`}
+                    >
+                      {tableNum}
+                    </button>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
           {/* Cash Register Status */}
           <div
@@ -317,7 +437,7 @@ export function POSView() {
       <PaymentDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
-        onConfirm={() => processSaleMutation.mutate()}
+        onConfirm={handleProcessSale}
         isProcessing={processSaleMutation.isPending}
       />
       <ReceiptDialog

@@ -49,6 +49,13 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CUENTA_CASA: 'Cuenta Casa / Merma',
 };
 
+// Map legacy TRANSFERENCIA to TARJETA for display
+export function normalizePaymentMethod(method: string): PaymentMethod {
+  if (method === 'TRANSFERENCIA') return 'TARJETA'
+  if (method === 'EFECTIVO' || method === 'TARJETA' || method === 'CUENTA_CASA') return method
+  return 'EFECTIVO'
+}
+
 export const PURCHASE_STATUS_LABELS: Record<PurchaseStatus, string> = {
   PENDIENTE: 'Pendiente',
   RECIBIDA: 'Recibida',

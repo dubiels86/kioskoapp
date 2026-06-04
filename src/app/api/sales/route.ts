@@ -69,6 +69,8 @@ export async function POST(request: Request) {
       notes,
       items,
       warehouseId, // Global warehouse for all items
+      payments, // Array of { method, amount }
+      tableNumber, // Mesa number (cafeteria mode)
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -83,6 +85,23 @@ export async function POST(request: Request) {
         { error: 'El método de pago es requerido' },
         { status: 400 }
       )
+    }
+
+    // Validate payments
+    if (!payments || !Array.isArray(payments) || payments.length === 0) {
+      return NextResponse.json(
+        { error: 'Debe especificar al menos un medio de pago' },
+        { status: 400 }
+      )
+    }
+
+    for (const p of payments) {
+      if (!p.method || p.amount === undefined || p.amount <= 0) {
+        return NextResponse.json(
+          { error: 'Cada medio de pago debe tener un método y un monto válido' },
+          { status: 400 }
+        )
+      }
     }
 
     // Validate global warehouseId if provided
@@ -185,9 +204,11 @@ export async function POST(request: Request) {
       const invoiceNumber = `V-${nextNumber.toString().padStart(6, '0')}`
 
       // Determine inventory movement type
-      const movementType = paymentMethod === 'CUENTA_CASA' ? 'MERMA' : 'VENTA'
+      // If ALL payments are CUENTA_CASA, it's a MERMA; otherwise VENTA
+      const allCuentaCasa = payments.every((p: { method: string }) => p.method === 'CUENTA_CASA')
+      const movementType = allCuentaCasa ? 'MERMA' : 'VENTA'
 
-      // Create the sale
+      // Create the sale with payments
       const newSale = await tx.sale.create({
         data: {
           invoiceNumber,
@@ -197,10 +218,17 @@ export async function POST(request: Request) {
           discount: discountAmount,
           total,
           costTotal,
+          tableNumber: tableNumber || null,
           customerName: customerName || null,
           notes: notes || null,
           items: {
             create: saleItemsData,
+          },
+          payments: {
+            create: payments.map((p: { method: string; amount: number }) => ({
+              method: p.method,
+              amount: p.amount,
+            })),
           },
         },
         include: {
@@ -217,6 +245,7 @@ export async function POST(request: Request) {
               },
             },
           },
+          payments: true,
           cashRegister: true,
         },
       })

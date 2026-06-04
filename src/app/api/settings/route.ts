@@ -30,6 +30,10 @@ const DEFAULT_SETTINGS = [
   { key: 'business_phone', value: '""', label: 'Teléfono', group: 'general' },
   { key: 'invoice_prefix', value: '"FAC"', label: 'Prefijo de Factura', group: 'general' },
   { key: 'invoice_next_number', value: '1', label: 'Próximo Número de Factura', group: 'general' },
+
+  // POS Mode
+  { key: 'pos_type', value: '"kiosko"', label: 'Tipo de POS', group: 'pos' },         // kiosko | cafetería
+  { key: 'pos_tables', value: '10', label: 'Cantidad de Mesas', group: 'pos' },       // Número de mesas (solo cafetería)
 ]
 
 export async function GET() {
