@@ -36,15 +36,16 @@ export async function GET(request: Request) {
     const totalCostOfGoods = sales.reduce((sum, s) => sum + s.costTotal, 0)
     const grossProfit = totalSalesAmount - totalCostOfGoods
 
-    // Sales grouped by payment method
+    // Sales grouped by payment method (normalize legacy TRANSFERENCIA → TARJETA)
+    const normalizeMethod = (m: string) => m === 'TRANSFERENCIA' ? 'TARJETA' : m
     const salesByMethod = {
       EFECTIVO: { count: 0, total: 0 },
-      TRANSFERENCIA: { count: 0, total: 0 },
+      TARJETA: { count: 0, total: 0 },
       CUENTA_CASA: { count: 0, total: 0, costTotal: 0 },
     }
 
     for (const sale of sales) {
-      const method = sale.paymentMethod as keyof typeof salesByMethod
+      const method = normalizeMethod(sale.paymentMethod) as keyof typeof salesByMethod
       if (salesByMethod[method]) {
         salesByMethod[method].count++
         salesByMethod[method].total += sale.total

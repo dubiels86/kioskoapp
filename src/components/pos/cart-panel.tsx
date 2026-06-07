@@ -20,6 +20,7 @@ import {
   ArrowRightLeft,
   Home,
   AlertCircle,
+  Coffee,
 } from 'lucide-react'
 import Image from 'next/image'
 
@@ -45,8 +46,8 @@ const PAYMENT_METHODS: {
     activeColor: 'border-slate-500 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm',
   },
   {
-    value: 'TRANSFERENCIA',
-    label: PAYMENT_METHOD_LABELS.TRANSFERENCIA,
+    value: 'TARJETA',
+    label: PAYMENT_METHOD_LABELS.TARJETA,
     icon: ArrowRightLeft,
     color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-amber-300 dark:hover:border-amber-600',
     activeColor: 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 text-amber-700 dark:text-amber-400 shadow-sm shadow-amber-500/10',
@@ -76,7 +77,11 @@ export function CartPanel({
     selectedPaymentMethod,
     setSelectedPaymentMethod,
     currentCashRegisterId,
+    posType,
+    selectedTable,
   } = useAppStore()
+
+  const isCafeteria = posType === 'cafeteria'
 
   const subtotal = cartSubtotal()
   const costTotal = cartCostTotal()
@@ -100,6 +105,12 @@ export function CartPanel({
           <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
             Carrito
           </h2>
+          {isCafeteria && selectedTable && (
+            <Badge className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 h-6 min-w-6 flex items-center justify-center text-xs font-bold px-1.5">
+              <Coffee className="w-3 h-3 mr-1" />
+              Mesa #{selectedTable}
+            </Badge>
+          )}
           {cart.length > 0 && (
             <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-0 h-6 min-w-6 flex items-center justify-center text-xs font-bold px-1.5">
               {cart.length}

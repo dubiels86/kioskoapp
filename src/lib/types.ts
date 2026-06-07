@@ -1,4 +1,4 @@
-export type PaymentMethod = 'EFECTIVO' | 'TRANSFERENCIA' | 'CUENTA_CASA';
+export type PaymentMethod = 'EFECTIVO' | 'TARJETA' | 'CUENTA_CASA';
 
 export type CashRegisterStatus = 'ABIERTA' | 'CERRADA';
 
@@ -43,16 +43,21 @@ export interface CartItem {
   warehouseId: string;
 }
 
+export interface PaymentEntry {
+  method: PaymentMethod;
+  amount: number;
+}
+
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   EFECTIVO: 'Efectivo',
-  TRANSFERENCIA: 'Transferencia',
+  TARJETA: 'Tarjeta',
   CUENTA_CASA: 'Cuenta Casa / Merma',
 };
 
 // Map legacy TRANSFERENCIA to TARJETA for display
 export function normalizePaymentMethod(method: string): PaymentMethod {
   if (method === 'TRANSFERENCIA') return 'TARJETA'
-  if (method === 'EFECTIVO' || method === 'TARJETA' || method === 'CUENTA_CASA') return method
+  if (method === 'EFECTIVO' || method === 'TARJETA' || method === 'CUENTA_CASA') return method as PaymentMethod
   return 'EFECTIVO'
 }
 

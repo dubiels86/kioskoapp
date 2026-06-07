@@ -116,8 +116,8 @@ export function CashCloseDialog({
     .filter((s) => s.paymentMethod === 'EFECTIVO')
     .reduce((sum, s) => sum + s.total, 0)
 
-  const transferenciaSales = sales
-    .filter((s) => s.paymentMethod === 'TRANSFERENCIA')
+  const tarjetaSales = sales
+    .filter((s) => s.paymentMethod === 'TARJETA' || s.paymentMethod === 'TRANSFERENCIA')
     .reduce((sum, s) => sum + s.total, 0)
 
   const cuentaCasaCost = sales
@@ -129,7 +129,7 @@ export function CashCloseDialog({
     .reduce((sum, s) => sum + s.total, 0)
 
   const totalGeneral =
-    efectivoSales + transferenciaSales + cuentaCasaSale
+    efectivoSales + tarjetaSales + cuentaCasaSale
 
   const entradaMovements = movements
     .filter((m) => m.type === 'ENTRADA')
@@ -194,9 +194,9 @@ export function CashCloseDialog({
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Ventas por transferencia</span>
+                <span className="text-slate-500">Ventas con tarjeta</span>
                 <span className="font-medium">
-                  {formatCurrency(transferenciaSales)}
+                  {formatCurrency(tarjetaSales)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">

@@ -32,7 +32,7 @@ import { CashOpenDialog } from './cash-open-dialog'
 import { CashMovementDialog } from './cash-movement-dialog'
 import { CashCloseDialog } from './cash-close-dialog'
 import { formatCurrency, formatTime } from '@/lib/format'
-import { PAYMENT_METHOD_LABELS } from '@/lib/types'
+import { PAYMENT_METHOD_LABELS, normalizePaymentMethod } from '@/lib/types'
 import type { PaymentMethod } from '@/lib/types'
 import { BillBreakdownDisplay, jsonToBreakdown } from '@/components/cash/bill-breakdown-input'
 
@@ -117,14 +117,14 @@ export function CashView() {
 
   const sales = cashRegister?.sales ?? []
   const salesSummary = useMemo(() => {
-    if (sales.length === 0) return { EFECTIVO: { count: 0, total: 0, costTotal: 0 }, TRANSFERENCIA: { count: 0, total: 0, costTotal: 0 }, CUENTA_CASA: { count: 0, total: 0, costTotal: 0 } }
+    if (sales.length === 0) return { EFECTIVO: { count: 0, total: 0, costTotal: 0 }, TARJETA: { count: 0, total: 0, costTotal: 0 }, CUENTA_CASA: { count: 0, total: 0, costTotal: 0 } }
     const summary: Record<string, { count: number; total: number; costTotal: number }> = {
       EFECTIVO: { count: 0, total: 0, costTotal: 0 },
-      TRANSFERENCIA: { count: 0, total: 0, costTotal: 0 },
+      TARJETA: { count: 0, total: 0, costTotal: 0 },
       CUENTA_CASA: { count: 0, total: 0, costTotal: 0 },
     }
     for (const sale of sales) {
-      const method = sale.paymentMethod as PaymentMethod
+      const method = normalizePaymentMethod(sale.paymentMethod)
       if (summary[method]) {
         summary[method].count++
         summary[method].total += sale.total
@@ -141,7 +141,7 @@ export function CashView() {
 
   const methodBadgeColors: Record<string, string> = {
     EFECTIVO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
-    TRANSFERENCIA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
+    TARJETA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
     CUENTA_CASA: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30',
   }
 
@@ -279,9 +279,9 @@ export function CashView() {
                   <CreditCard className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-medium">Ventas Transferencia</p>
-                  <p className="text-lg font-bold">{formatCurrency(salesSummary.TRANSFERENCIA.total)}</p>
-                  <p className="text-xs text-muted-foreground">{salesSummary.TRANSFERENCIA.count} ventas</p>
+                  <p className="text-xs text-muted-foreground font-medium">Ventas Tarjeta</p>
+                  <p className="text-lg font-bold">{formatCurrency(salesSummary.TARJETA.total)}</p>
+                  <p className="text-xs text-muted-foreground">{salesSummary.TARJETA.count} ventas</p>
                 </div>
               </div>
             </CardContent>
@@ -429,8 +429,8 @@ export function CashView() {
                         <TableCell className="text-xs text-muted-foreground">{cashRegister.sales.length - idx}</TableCell>
                         <TableCell className="text-sm">{sale.customerName || 'Consumidor Final'}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className={methodBadgeColors[sale.paymentMethod] || ''}>
-                            {PAYMENT_METHOD_LABELS[sale.paymentMethod as PaymentMethod] || sale.paymentMethod}
+                          <Badge variant="secondary" className={methodBadgeColors[normalizePaymentMethod(sale.paymentMethod)] || ''}>
+                            {PAYMENT_METHOD_LABELS[normalizePaymentMethod(sale.paymentMethod)] || sale.paymentMethod}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(sale.total)}</TableCell>

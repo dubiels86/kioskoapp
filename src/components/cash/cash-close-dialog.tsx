@@ -10,7 +10,7 @@ import { AlertCircle, CheckCircle, Banknote } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import { formatCurrency } from '@/lib/format'
-import { PAYMENT_METHOD_LABELS } from '@/lib/types'
+import { PAYMENT_METHOD_LABELS, normalizePaymentMethod } from '@/lib/types'
 import type { PaymentMethod } from '@/lib/types'
 import { BillBreakdownInput, BillBreakdownDisplay, breakdownToJSON, calculateBreakdownTotal, jsonToBreakdown } from '@/components/cash/bill-breakdown-input'
 import type { BillBreakdown } from '@/components/cash/bill-breakdown-input'
@@ -58,11 +58,11 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
   const salesSummary = useMemo(() => {
     const summary: Record<string, { count: number; total: number; costTotal: number }> = {
       EFECTIVO: { count: 0, total: 0, costTotal: 0 },
-      TRANSFERENCIA: { count: 0, total: 0, costTotal: 0 },
+      TARJETA: { count: 0, total: 0, costTotal: 0 },
       CUENTA_CASA: { count: 0, total: 0, costTotal: 0 },
     }
     for (const sale of cashRegister.sales) {
-      const method = sale.paymentMethod as PaymentMethod
+      const method = normalizePaymentMethod(sale.paymentMethod)
       if (summary[method]) {
         summary[method].count++
         summary[method].total += sale.total
@@ -138,7 +138,7 @@ export function CashCloseDialog({ open, onOpenChange, cashRegister }: CashCloseD
 
   const methodBadgeColors: Record<string, string> = {
     EFECTIVO: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30',
-    TRANSFERENCIA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
+    TARJETA: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30',
     CUENTA_CASA: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
   }
 

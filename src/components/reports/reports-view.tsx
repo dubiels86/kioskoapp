@@ -69,7 +69,7 @@ interface DailyReport {
   grossProfit: number
   salesByMethod: {
     EFECTIVO: { count: number; total: number }
-    TRANSFERENCIA: { count: number; total: number }
+    TARJETA: { count: number; total: number }
     CUENTA_CASA: { count: number; total: number; costTotal: number }
   }
   cashRegister: {
@@ -164,7 +164,7 @@ export function ReportsView() {
 
   const maxMethodTotal = Math.max(
     report.salesByMethod.EFECTIVO.total,
-    report.salesByMethod.TRANSFERENCIA.total,
+    report.salesByMethod.TARJETA.total,
     report.salesByMethod.CUENTA_CASA.total,
     1
   )
@@ -262,9 +262,9 @@ export function ReportsView() {
                   <CreditCard className="w-4 h-4 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Transferencia</p>
-                  <p className="text-sm font-bold">{formatCurrency(report.salesByMethod.TRANSFERENCIA.total)}</p>
-                  <p className="text-xs text-muted-foreground">{report.salesByMethod.TRANSFERENCIA.count} ventas</p>
+                  <p className="text-xs text-muted-foreground">Tarjeta</p>
+                  <p className="text-sm font-bold">{formatCurrency(report.salesByMethod.TARJETA.total)}</p>
+                  <p className="text-xs text-muted-foreground">{report.salesByMethod.TARJETA.count} ventas</p>
                 </div>
               </div>
             </CardContent>
@@ -322,7 +322,7 @@ export function ReportsView() {
           <CardContent className="space-y-4">
             {[
               { method: 'EFECTIVO' as PaymentMethod, data: report.salesByMethod.EFECTIVO, color: 'bg-emerald-500', bgLight: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30' },
-              { method: 'TRANSFERENCIA' as PaymentMethod, data: report.salesByMethod.TRANSFERENCIA, color: 'bg-amber-500', bgLight: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30' },
+              { method: 'TARJETA' as PaymentMethod, data: report.salesByMethod.TARJETA, color: 'bg-amber-500', bgLight: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30' },
               { method: 'CUENTA_CASA' as PaymentMethod, data: report.salesByMethod.CUENTA_CASA, color: 'bg-violet-500', bgLight: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30' },
             ].map(({ method, data, color, bgLight }) => (
               <div key={method} className="space-y-2">

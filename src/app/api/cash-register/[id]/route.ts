@@ -33,19 +33,21 @@ export async function GET(
       )
     }
 
-    // Group sales by payment method
+    // Group sales by payment method (normalize legacy TRANSFERENCIA → TARJETA)
+    const normalizeMethod = (m: string) => m === 'TRANSFERENCIA' ? 'TARJETA' : m
     const salesByMethod = {
       EFECTIVO: { count: 0, total: 0 },
-      TRANSFERENCIA: { count: 0, total: 0 },
+      TARJETA: { count: 0, total: 0 },
       CUENTA_CASA: { count: 0, total: 0, costTotal: 0 },
     }
 
     for (const sale of cashRegister.sales) {
-      if (salesByMethod[sale.paymentMethod as keyof typeof salesByMethod]) {
-        const group = salesByMethod[sale.paymentMethod as keyof typeof salesByMethod]
+      const method = normalizeMethod(sale.paymentMethod) as keyof typeof salesByMethod
+      if (salesByMethod[method]) {
+        const group = salesByMethod[method]
         group.count++
         group.total += sale.total
-        if (sale.paymentMethod === 'CUENTA_CASA') {
+        if (method === 'CUENTA_CASA') {
           group.costTotal += sale.costTotal
         }
       }

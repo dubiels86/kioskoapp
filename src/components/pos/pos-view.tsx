@@ -119,6 +119,7 @@ export function POSView() {
     setPosTables,
     selectedTable,
     setSelectedTable,
+    tableCarts,
   } = useAppStore()
 
   const queryClient = useQueryClient()
@@ -318,7 +319,7 @@ export function POSView() {
                 <div className="flex items-center gap-2">
                   <Coffee className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <span className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                    Mesa
+                    Mesas
                   </span>
                   {selectedTable && (
                     <span className="text-lg font-bold text-amber-800 dark:text-amber-300">
@@ -326,33 +327,49 @@ export function POSView() {
                     </span>
                   )}
                 </div>
-                {selectedTable && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedTable(null)}
-                    className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-950/30"
-                  >
-                    <ArrowLeft className="w-3 h-3 mr-1" />
-                    Quitar
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {Object.keys(tableCarts).length > 0 && (
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                      {Object.keys(tableCarts).length} {Object.keys(tableCarts).length === 1 ? 'mesa activa' : 'mesas activas'}
+                    </span>
+                  )}
+                  {selectedTable && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedTable(null)}
+                      className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-950/30"
+                    >
+                      <ArrowLeft className="w-3 h-3 mr-1" />
+                      Quitar
+                    </Button>
+                  )}
+                </div>
               </div>
               <ScrollArea className="max-h-24">
                 <div className="flex flex-wrap gap-1.5">
-                  {Array.from({ length: posTables }, (_, i) => i + 1).map((tableNum) => (
-                    <button
-                      key={tableNum}
-                      onClick={() => setSelectedTable(tableNum === selectedTable ? null : tableNum)}
-                      className={`min-w-[36px] h-8 rounded-lg text-xs font-bold transition-all border ${
-                        tableNum === selectedTable
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                          : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/30'
-                      }`}
-                    >
-                      {tableNum}
-                    </button>
-                  ))}
+                  {Array.from({ length: posTables }, (_, i) => i + 1).map((tableNum) => {
+                    const hasActiveOrder = (tableCarts[tableNum] || []).length > 0;
+                    const isSelected = tableNum === selectedTable;
+                    return (
+                      <button
+                        key={tableNum}
+                        onClick={() => setSelectedTable(isSelected ? null : tableNum)}
+                        className={`relative min-w-[36px] h-8 rounded-lg text-xs font-bold transition-all border ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                            : hasActiveOrder
+                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-400 dark:border-amber-600 hover:border-amber-500'
+                              : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:border-amber-400 hover:bg-amber-100 dark:hover:bg-amber-950/30'
+                        }`}
+                      >
+                        {tableNum}
+                        {hasActiveOrder && !isSelected && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-amber-50 dark:border-amber-950/20" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
