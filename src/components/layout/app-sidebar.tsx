@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { AppView } from '@/lib/types'
@@ -28,32 +27,10 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { activeView, setActiveView, currentCashRegisterId } = useAppStore()
-  const [downloading, setDownloading] = useState(false)
 
   const handleNavClick = (view: AppView) => {
     setActiveView(view)
     onNavigate?.()
-  }
-
-  const handleDownload = async () => {
-    setDownloading(true)
-    try {
-      const res = await fetch('/api/download')
-      if (!res.ok) throw new Error('Error al descargar')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'kiosko-app.tar.gz'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch {
-      alert('Error al descargar el proyecto. Intentalo de nuevo.')
-    } finally {
-      setDownloading(false)
-    }
   }
 
   const cashOpen = currentCashRegisterId !== null
@@ -105,14 +82,14 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       {/* Cash Register Status & Download */}
       <div className="px-3 pb-4 space-y-2">
         <div className="mx-0 h-px bg-slate-700/60 mb-2" />
-        <button
-          onClick={handleDownload}
-          disabled={downloading}
-          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all duration-150 disabled:opacity-50"
+        <a
+          href="/kiosko-app.tar.gz"
+          download="kiosko-app.tar.gz"
+          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all duration-150"
         >
           <Download className="w-4 h-4" />
-          {downloading ? 'Descargando...' : 'Descargar Proyecto'}
-        </button>
+          Descargar Proyecto
+        </a>
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-800/60">
           <span
             className={cn(
