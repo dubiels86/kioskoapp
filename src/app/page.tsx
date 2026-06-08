@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/layout/app-header'
 import { POSView } from '@/components/pos/pos-view'
 import { InventoryView } from '@/components/inventory/inventory-view'
 import { PurchasesView } from '@/components/purchases/purchases-view'
+import { ExpensesView } from '@/components/expenses/expenses-view'
 import { CashView } from '@/components/cash/cash-view'
 import { RepairsView } from '@/components/repairs/repairs-view'
 import { ReportsView } from '@/components/reports/reports-view'
@@ -17,6 +18,7 @@ const MODULE_COMPONENTS: Record<AppView, React.ComponentType> = {
   pos: POSView,
   inventory: InventoryView,
   purchases: PurchasesView,
+  expenses: ExpensesView,
   cash: CashView,
   repairs: RepairsView,
   reports: ReportsView,
@@ -27,6 +29,7 @@ const VIEW_LABELS: Record<AppView, string> = {
   pos: 'Punto de Venta',
   inventory: 'Inventario',
   purchases: 'Compras',
+  expenses: 'Gastos',
   cash: 'Caja',
   repairs: 'Reparaciones',
   reports: 'Reportes',

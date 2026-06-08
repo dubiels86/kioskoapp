@@ -181,6 +181,7 @@ model CashRegister {
   closingBillBreakdown  String?        // JSON string with bill denomination counts for closing
   sales                 Sale[]
   movements             CashMovement[]
+  expenses              Expense[]
 }
 
 model CashMovement {
@@ -252,6 +253,22 @@ model User {
   lastLogin DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Expense {
+  id              String        @id @default(cuid())
+  description     String
+  amount          Float
+  category        String        @default("OTRO") // ALQUILER, SERVICIOS, SALARIOS, TRANSPORTE, MARKETING, MANTENIMIENTO, IMPUESTOS, OTRO
+  paymentMethod   String        @default("EFECTIVO") // EFECTIVO, TARJETA, TRANSFERENCIA
+  date            DateTime      @default(now())
+  cashRegisterId  String?
+  cashRegister    CashRegister? @relation(fields: [cashRegisterId], references: [id])
+  recipient       String?       // A quién se pagó
+  receiptNumber   String?       // Número de recibo/factura
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model Setting {

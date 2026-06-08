@@ -17,6 +17,7 @@ const VIEW_LABELS: Record<AppView, string> = {
   pos: 'Punto de Venta',
   inventory: 'Inventario',
   purchases: 'Compras',
+  expenses: 'Gastos',
   cash: 'Caja',
   repairs: 'Reparaciones',
   reports: 'Reportes',

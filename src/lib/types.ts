@@ -12,7 +12,39 @@ export type CashMovementType = 'ENTRADA' | 'SALIDA';
 
 export type WarehouseType = 'PRINCIPAL' | 'VENTAS' | 'SECUNDARIO';
 
-export type AppView = 'pos' | 'inventory' | 'purchases' | 'cash' | 'repairs' | 'reports' | 'settings';
+export type ExpenseCategory = 'ALQUILER' | 'SERVICIOS' | 'SALARIOS' | 'TRANSPORTE' | 'MARKETING' | 'MANTENIMIENTO' | 'IMPUESTOS' | 'OTRO';
+
+export type ExpensePaymentMethod = 'EFECTIVO' | 'TARJETA' | 'TRANSFERENCIA';
+
+export const EXPENSE_CATEGORY_LABELS: Record<ExpenseCategory, string> = {
+  ALQUILER: 'Alquiler',
+  SERVICIOS: 'Servicios',
+  SALARIOS: 'Salarios',
+  TRANSPORTE: 'Transporte',
+  MARKETING: 'Marketing',
+  MANTENIMIENTO: 'Mantenimiento',
+  IMPUESTOS: 'Impuestos',
+  OTRO: 'Otro',
+};
+
+export const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
+  ALQUILER: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  SERVICIOS: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  SALARIOS: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  TRANSPORTE: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  MARKETING: 'bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300',
+  MANTENIMIENTO: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+  IMPUESTOS: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  OTRO: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+};
+
+export const EXPENSE_PAYMENT_LABELS: Record<ExpensePaymentMethod, string> = {
+  EFECTIVO: 'Efectivo',
+  TARJETA: 'Tarjeta',
+  TRANSFERENCIA: 'Transferencia',
+};
+
+export type AppView = 'pos' | 'inventory' | 'purchases' | 'expenses' | 'cash' | 'repairs' | 'reports' | 'settings';
 
 export const WAREHOUSE_TYPE_LABELS: Record<WarehouseType, string> = {
   PRINCIPAL: 'Depósito Principal',
@@ -83,6 +115,8 @@ export type RolePermission =
   | 'inventory.manage'
   | 'purchases.access'
   | 'purchases.manage'
+  | 'expenses.access'
+  | 'expenses.manage'
   | 'cash.access'
   | 'cash.open'
   | 'cash.close'
@@ -101,6 +135,8 @@ export const ROLE_PERMISSION_LABELS: Record<RolePermission, string> = {
   'inventory.manage': 'Gestionar inventario',
   'purchases.access': 'Acceso a Compras',
   'purchases.manage': 'Gestionar compras',
+  'expenses.access': 'Acceso a Gastos',
+  'expenses.manage': 'Gestionar gastos',
   'cash.access': 'Acceso a Caja',
   'cash.open': 'Abrir caja',
   'cash.close': 'Cerrar caja',
@@ -117,6 +153,7 @@ export const ROLE_PERMISSION_GROUPS: { group: string; permissions: RolePermissio
   { group: 'Punto de Venta', permissions: ['pos.access', 'pos.refund'] },
   { group: 'Inventario', permissions: ['inventory.access', 'inventory.manage'] },
   { group: 'Compras', permissions: ['purchases.access', 'purchases.manage'] },
+  { group: 'Gastos', permissions: ['expenses.access', 'expenses.manage'] },
   { group: 'Caja', permissions: ['cash.access', 'cash.open', 'cash.close'] },
   { group: 'Reparaciones', permissions: ['repairs.access', 'repairs.manage'] },
   { group: 'Reportes', permissions: ['reports.access'] },

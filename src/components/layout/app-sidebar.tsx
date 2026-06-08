@@ -1,6 +1,6 @@
 'use client'
 
-import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download } from 'lucide-react'
+import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download, Receipt } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { AppView } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { view: 'pos', label: 'POS', icon: ShoppingCart },
   { view: 'inventory', label: 'Inventario', icon: Package },
   { view: 'purchases', label: 'Compras', icon: Truck },
+  { view: 'expenses', label: 'Gastos', icon: Receipt },
   { view: 'cash', label: 'Caja', icon: Banknote },
   { view: 'repairs', label: 'Reparaciones', icon: Wrench },
   { view: 'reports', label: 'Reportes', icon: BarChart3 },
