@@ -1,9 +1,29 @@
 import { create } from 'zustand';
-import type { AppView, CartItem, PaymentMethod } from '@/lib/types';
+import type { AppView, CartItem, PaymentMethod, RolePermission } from '@/lib/types';
 
 export type PosType = 'kiosko' | 'cafeteria';
 
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  roleId: string;
+  role: { id: string; name: string };
+  permissions: RolePermission[];
+}
+
 interface AppState {
+  // Auth
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  isLoadingAuth: boolean;
+  setUser: (user: AuthUser | null) => void;
+  setLoadingAuth: (loading: boolean) => void;
+  logout: () => void;
+  hasPermission: (permission: RolePermission) => boolean;
+
   // Navigation
   activeView: AppView;
   setActiveView: (view: AppView) => void;
@@ -50,6 +70,29 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
+  // Auth
+  user: null,
+  isAuthenticated: false,
+  isLoadingAuth: true,
+  setUser: (user) => set({ user, isAuthenticated: !!user, isLoadingAuth: false }),
+  setLoadingAuth: (loading) => set({ isLoadingAuth: loading }),
+  logout: () => set({
+    user: null,
+    isAuthenticated: false,
+    isLoadingAuth: false,
+    activeView: 'pos',
+    cart: [],
+    selectedTable: null,
+    currentCashRegisterId: null,
+  }),
+  hasPermission: (permission) => {
+    const { user } = get();
+    if (!user) return false;
+    // 'settings.all' grants access to all settings
+    if (permission !== 'settings.all' && user.permissions.includes('settings.all' as RolePermission)) return true;
+    return user.permissions.includes(permission);
+  },
+
   // Navigation
   activeView: 'pos',
   setActiveView: (view) => set({ activeView: view }),

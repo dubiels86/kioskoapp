@@ -1,6 +1,6 @@
 'use client'
 
-import { Menu } from 'lucide-react'
+import { Menu, LogOut, User } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { AppView } from '@/lib/types'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { useState } from 'react'
 
@@ -25,8 +33,23 @@ const VIEW_LABELS: Record<AppView, string> = {
 }
 
 export function AppHeader() {
-  const { activeView } = useAppStore()
+  const { activeView, user, logout } = useAppStore()
   const [sheetOpen, setSheetOpen] = useState(false)
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+    } catch {
+      // Ignore
+    }
+    logout()
+  }
+
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+    return name.substring(0, 2).toUpperCase()
+  }
 
   return (
     <>
@@ -40,9 +63,33 @@ export function AppHeader() {
         >
           <Menu className="w-5 h-5" />
         </Button>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate">
+        <h1 className="text-base font-semibold text-slate-800 dark:text-slate-100 truncate flex-1">
           {VIEW_LABELS[activeView]}
         </h1>
+
+        {/* Mobile user dropdown */}
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label="Menú de usuario">
+                <div className="flex items-center justify-center w-7 h-7 bg-emerald-100 dark:bg-emerald-900/40 rounded-full text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                  {getInitials(user.name)}
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="font-normal">
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.role.name}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                Cerrar Sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </header>
 
       {/* Mobile sidebar sheet */}

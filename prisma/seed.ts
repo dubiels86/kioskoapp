@@ -1,4 +1,5 @@
 import { db } from '@/lib/db'
+import bcrypt from 'bcryptjs'
 
 async function seed() {
   console.log('🌱 Seeding database...')
@@ -25,6 +26,92 @@ async function seed() {
   })
 
   console.log('  - 2 almacenes creados (Principal y Ventas)')
+
+  // Create default roles
+  const adminRole = await db.role.create({
+    data: {
+      name: 'Administrador',
+      description: 'Acceso total al sistema',
+      permissions: JSON.stringify([
+        'pos.access', 'pos.refund',
+        'inventory.access', 'inventory.manage',
+        'purchases.access', 'purchases.manage',
+        'expenses.access', 'expenses.manage',
+        'cash.access', 'cash.open', 'cash.close',
+        'repairs.access', 'repairs.manage',
+        'reports.access',
+        'settings.access', 'settings.users', 'settings.roles', 'settings.all',
+      ]),
+      isActive: true,
+    },
+  })
+
+  const vendedorRole = await db.role.create({
+    data: {
+      name: 'Vendedor',
+      description: 'Acceso a ventas y consultas básicas',
+      permissions: JSON.stringify([
+        'pos.access',
+        'cash.access', 'cash.open',
+        'repairs.access',
+      ]),
+      isActive: true,
+    },
+  })
+
+  const cajeroRole = await db.role.create({
+    data: {
+      name: 'Cajero',
+      description: 'Acceso a punto de venta y caja',
+      permissions: JSON.stringify([
+        'pos.access',
+        'cash.access', 'cash.open', 'cash.close',
+        'expenses.access',
+      ]),
+      isActive: true,
+    },
+  })
+
+  const depositoRole = await db.role.create({
+    data: {
+      name: 'Depósito',
+      description: 'Acceso a inventario y compras',
+      permissions: JSON.stringify([
+        'inventory.access', 'inventory.manage',
+        'purchases.access', 'purchases.manage',
+      ]),
+      isActive: true,
+    },
+  })
+
+  console.log('  - 4 roles creados (Administrador, Vendedor, Cajero, Depósito)')
+
+  // Create default admin user (password: "admin")
+  const adminPassword = await bcrypt.hash('admin', 10)
+  await db.user.create({
+    data: {
+      username: 'admin',
+      password: adminPassword,
+      name: 'Administrador',
+      email: 'admin@kioskoapp.com',
+      roleId: adminRole.id,
+      isActive: true,
+    },
+  })
+
+  // Create default vendedor user (password: "vendedor")
+  const vendedorPassword = await bcrypt.hash('vendedor', 10)
+  await db.user.create({
+    data: {
+      username: 'vendedor',
+      password: vendedorPassword,
+      name: 'Vendedor Demo',
+      roleId: vendedorRole.id,
+      isActive: true,
+    },
+  })
+
+  console.log('  - 2 usuarios creados (admin/admin, vendedor/vendedor)')
 
   // Create categories
   const bebidas = await db.category.create({ data: { name: 'Bebidas', description: 'Gaseosas, jugos, agua' } })
@@ -115,6 +202,8 @@ async function seed() {
 
   console.log('✅ Seed completed!')
   console.log(`  - 2 almacenes creados`)
+  console.log(`  - 4 roles creados (Administrador, Vendedor, Cajero, Depósito)`)
+  console.log(`  - 2 usuarios creados (admin/admin, vendedor/vendedor)`)
   console.log(`  - ${5} categorías creadas`)
   console.log(`  - ${productsData.length} productos creados (con stock por almacén)`)
   console.log(`  - 3 proveedores creados`)

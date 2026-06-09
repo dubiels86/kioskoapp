@@ -20,3 +20,64 @@ Stage Summary:
 - normalizePaymentMethod() handles legacy TRANSFERENCIA records in DB
 - Cafeteria mode: each table has its own cart, visual indicators for active tables
 - Server stability is an ongoing issue (OOM kills with Turbopack at ~1.4GB RAM)
+
+---
+Task ID: 2
+Agent: Main
+Task: Implement login screen, authentication system, and create update script for downloaded project
+
+Work Log:
+- Explored entire project structure: 8 modules (POS, Inventory, Purchases, Expenses, Cash, Repairs, Reports, Settings)
+- Found User and Role models exist in Prisma schema but NO authentication was implemented
+- Found next-auth@4 was installed but completely unused
+- Passwords stored as base64 (not hashed), permissions defined but never enforced
+- Created /src/lib/auth.ts with session management (HMAC-signed cookies, bcrypt password hashing, backward-compatible with base64)
+- Created /api/auth/login (POST - validate credentials, set cookie, update lastLogin, auto-upgrade base64→bcrypt)
+- Created /api/auth/logout (POST - clear session cookie)
+- Created /api/auth/session (GET - return authenticated user data from cookie)
+- Updated /src/lib/store.ts with auth state: user, isAuthenticated, isLoadingAuth, setUser, logout, hasPermission
+- Created /src/components/auth/login-view.tsx - full-screen dark-themed login form with emerald accent
+- Updated /src/app/page.tsx - shows LoginView when not authenticated, main app when authenticated
+- Updated /src/components/layout/app-sidebar.tsx - user info card, logout button, permission-filtered navigation (emerald accent instead of blue)
+- Updated /src/components/layout/app-header.tsx - mobile user dropdown with logout
+- Updated /src/app/api/users/route.ts - now uses bcrypt.hash() instead of base64
+- Updated /src/app/api/users/[id]/route.ts - password resets now use bcrypt
+- Updated /prisma/seed.ts - creates 4 default roles + 2 users (admin/admin, vendedor/vendedor) with bcrypt
+- Created /scripts/migrate-add-auth.ts - adds roles + admin user to existing database, upgrades base64→bcrypt
+- Created /public/update-v3.sh - shell script for updating downloaded projects
+- Created /public/update-v3.tar.gz - update package with all new auth files
+- Rebuilt /public/kiosko-app.tar.gz - full project download with auth
+- Fixed Next.js 16 cookies() API: must use `await cookies()` (returns Promise)
+- Installed bcryptjs + @types/bcryptjs for proper password hashing
+- Ran migration script on existing database: created Cajero/Depósito roles, upgraded admin password to bcrypt
+- Updated Administrador role permissions to include expenses.access + expenses.manage
+- Lint passes with zero errors
+
+API Testing Results (curl):
+- GET /api/auth/session (no cookie) → 401 {authenticated: false} ✅
+- POST /api/auth/login (admin/admin) → 200 {user: {..., permissions: [...]}} ✅
+- POST /api/auth/login (wrong password) → 401 {error: "Usuario o contraseña incorrectos"} ✅
+- GET /api/auth/session (with cookie) → 200 {authenticated: true, user: {...}} ✅
+- POST /api/auth/logout → 200 {success: true} ✅
+
+Key Bug Fix: Cookie URL-encoding issue
+- Browser URL-encodes cookie values (replacing : with %3A)
+- Server was not decoding the cookie value before parsing
+- Fixed by adding `decodeURIComponent(rawToken)` in getSessionUserId()
+
+Browser Testing:
+- Login screen renders correctly with dark theme ✅
+- Username/password fields and submit button work ✅
+- Server instability prevented full E2E browser test (server OOM kills during Turbopack compilation when browser connects)
+
+Stage Summary:
+- Complete authentication system implemented: login, logout, session management
+- Login screen with dark theme (slate/emerald color scheme)
+- Permissions-based navigation filtering (users only see modules they have access to)
+- User info + logout in sidebar (desktop) and dropdown (mobile)
+- bcrypt password hashing with backward compatibility for base64 passwords
+- Auto-upgrade: when a user logs in with a base64 password, it's silently upgraded to bcrypt
+- Default credentials: admin/admin (Administrador role, full access)
+- 4 default roles: Administrador, Vendedor, Cajero, Depósito
+- Update script (update-v3.sh + update-v3.tar.gz) for existing downloaded projects
+- Migration script (migrate-add-auth.ts) for existing databases

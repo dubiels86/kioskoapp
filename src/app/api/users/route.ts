@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
+import { hashPassword } from '@/lib/auth'
 
 export async function GET() {
   try {
@@ -58,8 +59,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Rol no encontrado' }, { status: 400 })
     }
 
-    // Simple hash - in production use bcrypt
-    const hashedPassword = Buffer.from(password).toString('base64')
+    // Hash password with bcrypt
+    const hashedPassword = await hashPassword(password)
 
     const user = await db.user.create({
       data: {

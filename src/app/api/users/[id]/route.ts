@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
+import { hashPassword } from '@/lib/auth'
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -40,7 +41,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
           { status: 400 }
         )
       }
-      updateData.password = Buffer.from(password).toString('base64')
+      updateData.password = await hashPassword(password)
     }
 
     const user = await db.user.update({

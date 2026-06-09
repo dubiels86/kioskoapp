@@ -1,25 +1,26 @@
 'use client'
 
-import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download, Receipt } from 'lucide-react'
+import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download, Receipt, LogOut, User } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
-import type { AppView } from '@/lib/types'
+import type { AppView, RolePermission } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
   view: AppView
   label: string
   icon: React.ComponentType<{ className?: string }>
+  permission: RolePermission
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { view: 'pos', label: 'POS', icon: ShoppingCart },
-  { view: 'inventory', label: 'Inventario', icon: Package },
-  { view: 'purchases', label: 'Compras', icon: Truck },
-  { view: 'expenses', label: 'Gastos', icon: Receipt },
-  { view: 'cash', label: 'Caja', icon: Banknote },
-  { view: 'repairs', label: 'Reparaciones', icon: Wrench },
-  { view: 'reports', label: 'Reportes', icon: BarChart3 },
-  { view: 'settings', label: 'Ajustes', icon: Settings },
+  { view: 'pos', label: 'POS', icon: ShoppingCart, permission: 'pos.access' },
+  { view: 'inventory', label: 'Inventario', icon: Package, permission: 'inventory.access' },
+  { view: 'purchases', label: 'Compras', icon: Truck, permission: 'purchases.access' },
+  { view: 'expenses', label: 'Gastos', icon: Receipt, permission: 'expenses.access' },
+  { view: 'cash', label: 'Caja', icon: Banknote, permission: 'cash.access' },
+  { view: 'repairs', label: 'Reparaciones', icon: Wrench, permission: 'repairs.access' },
+  { view: 'reports', label: 'Reportes', icon: BarChart3, permission: 'reports.access' },
+  { view: 'settings', label: 'Ajustes', icon: Settings, permission: 'settings.access' },
 ]
 
 interface AppSidebarProps {
@@ -27,14 +28,33 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
-  const { activeView, setActiveView, currentCashRegisterId } = useAppStore()
+  const { activeView, setActiveView, currentCashRegisterId, user, hasPermission, logout } = useAppStore()
 
   const handleNavClick = (view: AppView) => {
     setActiveView(view)
     onNavigate?.()
   }
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+    } catch {
+      // Ignore errors, we'll clear client state anyway
+    }
+    logout()
+  }
+
   const cashOpen = currentCashRegisterId !== null
+
+  // Filter nav items by user permissions
+  const visibleNavItems = NAV_ITEMS.filter((item) => hasPermission(item.permission))
+
+  // Get initials for avatar
+  const getInitials = (name: string) => {
+    const parts = name.trim().split(' ')
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+    return name.substring(0, 2).toUpperCase()
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-900 text-white w-60">
@@ -53,7 +73,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = activeView === item.view
           const Icon = item.icon
           return (
@@ -69,20 +89,22 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             >
               <Icon className={cn(
                 'w-5 h-5 transition-colors',
-                isActive ? 'text-blue-300' : 'text-slate-500'
+                isActive ? 'text-emerald-300' : 'text-slate-500'
               )} />
               {item.label}
               {isActive && (
-                <div className="ml-auto w-1 h-4 rounded-full bg-blue-400" />
+                <div className="ml-auto w-1 h-4 rounded-full bg-emerald-400" />
               )}
             </button>
           )
         })}
       </nav>
 
-      {/* Cash Register Status & Download */}
+      {/* Bottom section */}
       <div className="px-3 pb-4 space-y-2">
         <div className="mx-0 h-px bg-slate-700/60 mb-2" />
+
+        {/* Download link */}
         <a
           href="/kiosko-app.tar.gz"
           download="kiosko-app.tar.gz"
@@ -91,6 +113,8 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <Download className="w-4 h-4" />
           Descargar Proyecto
         </a>
+
+        {/* Cash Register Status */}
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-800/60">
           <span
             className={cn(
@@ -104,6 +128,28 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             Caja: {cashOpen ? 'ABIERTA' : 'CERRADA'}
           </span>
         </div>
+
+        {/* User Info & Logout */}
+        {user && (
+          <div className="rounded-lg bg-slate-800/60 p-3 space-y-2">
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-8 h-8 bg-emerald-600/30 rounded-full text-emerald-300 text-xs font-bold">
+                {getInitials(user.name)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user.role.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-150"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Cerrar Sesión
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
