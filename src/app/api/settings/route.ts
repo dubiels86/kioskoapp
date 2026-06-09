@@ -1,5 +1,6 @@
 import { db } from '@/lib/db'
 import { NextResponse } from 'next/server'
+import { APP_VERSION } from '@/lib/version'
 
 // Default settings that will be seeded if they don't exist
 const DEFAULT_SETTINGS = [
@@ -39,6 +40,10 @@ const DEFAULT_SETTINGS = [
   { key: 'custom_units', value: '[]', label: 'Unidades Personalizadas', group: 'custom_options' },
   { key: 'custom_expense_categories', value: '[]', label: 'Categorías de Gasto Personalizadas', group: 'custom_options' },
   { key: 'custom_expense_payment_methods', value: '[]', label: 'Métodos de Pago de Gastos Personalizados', group: 'custom_options' },
+
+  // System info (read-only, auto-managed)
+  { key: 'app_version', value: `"${APP_VERSION}"`, label: 'Versión del Sistema', group: 'system' },
+  { key: 'last_updated', value: `"${new Date().toISOString()}"`, label: 'Última Actualización', group: 'system' },
 ]
 
 export async function GET() {

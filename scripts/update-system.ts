@@ -10,9 +10,12 @@
  * 4. Agrega las configuraciones de opciones personalizadas (unidades, categorías de gasto, métodos de pago)
  * 5. Actualiza contraseñas base64 legacy a bcrypt
  * 6. Verifica la integridad del sistema
+ * 7. Registra la versión del sistema en la base de datos
  */
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
+
+const APP_VERSION = '0.4.0'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
 const SUPER_ADMIN_PASSWORD = 'openpgpwd'
@@ -239,6 +242,23 @@ async function updateSystem() {
     }
 
     // ========================================
+    // 8. Registrar versión del sistema
+    // ========================================
+    console.log('')
+    console.log('🏷️  Registrando versión del sistema...')
+    await db.setting.upsert({
+      where: { key: 'app_version' },
+      update: { value: `"${APP_VERSION}"` },
+      create: { key: 'app_version', value: `"${APP_VERSION}"`, label: 'Versión del Sistema', group: 'system' },
+    })
+    await db.setting.upsert({
+      where: { key: 'last_updated' },
+      update: { value: `"${new Date().toISOString()}"` },
+      create: { key: 'last_updated', value: `"${new Date().toISOString()}"`, label: 'Última Actualización', group: 'system' },
+    })
+    console.log(`  ✅ Versión registrada: v${APP_VERSION}`)
+
+    // ========================================
     // Resumen final
     // ========================================
     console.log('')
@@ -246,16 +266,20 @@ async function updateSystem() {
     console.log('✅ Actualización completada exitosamente!')
     console.log('')
     console.log('📋 Resumen:')
+    console.log(`   🏷️  Versión: v${APP_VERSION}`)
     console.log(`   🛡️  Roles verificados y actualizados`)
     console.log(`   👤 Super Admin: ${SUPER_ADMIN_USERNAME} / ${SUPER_ADMIN_PASSWORD}`)
     console.log(`   ⚙️  Configuraciones de opciones personalizadas agregadas`)
     console.log(`   🔐 Contraseñas verificadas`)
     console.log('')
     console.log('🆕 Nuevas funcionalidades en esta versión:')
-    console.log('   • Campos select con creación sobre la marcha')
-    console.log('   • Crear categorías, proveedores, unidades, categorías de gasto y roles directamente desde los formularios')
+    console.log('   • Sistema de actualización automática')
+    console.log('   • Verificación de versión desde la configuración')
+    console.log('   • Script de actualización completo (update.sh)')
     console.log('   • Unidades personalizadas almacenadas en configuración')
     console.log('   • Categorías y métodos de pago de gastos personalizables')
+    console.log('   • Sistema de Login y Autenticación')
+    console.log('   • Permisos por rol en la navegación')
 
   } catch (error) {
     console.error('')

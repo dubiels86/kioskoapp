@@ -1,6 +1,6 @@
 {
   "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "create-super-admin": "bun run scripts/create-super-admin.ts",
-    "update-system": "bun run scripts/update-system.ts"
+    "update-system": "bun run scripts/update-system.ts",
+    "build-update": "bun run scripts/build-update.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

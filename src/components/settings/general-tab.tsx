@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Store, Save, Coffee, ShoppingBag } from 'lucide-react'
+import { Store, Save, Coffee, ShoppingBag, Info, RefreshCw, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import type { PosType } from '@/lib/store'
@@ -290,6 +290,62 @@ export function GeneralTab() {
                     Próxima factura: {invoicePrefix || 'FAC'}-{String(invoiceNextNumber).padStart(6, '0')}
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* System Info */}
+            <div className="space-y-4">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Información del Sistema
+              </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Versión del Sistema</p>
+                  <p className="text-sm font-medium">v{settings?.system?.find(s => s.key === 'app_version') ? JSON.parse(settings.system.find(s => s.key === 'app_version')!.value) : '—'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Última Actualización</p>
+                  <p className="text-sm font-medium">
+                    {settings?.system?.find(s => s.key === 'last_updated')
+                      ? new Date(JSON.parse(settings.system.find(s => s.key === 'last_updated')!.value)).toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                      : '—'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/version')
+                      if (res.ok) {
+                        const data = await res.json()
+                        toast.info(`KioskoApp v${data.version}`)
+                      }
+                    } catch {
+                      toast.error('No se pudo verificar la versión')
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Verificar Versión
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.open('/api/download', '_blank')
+                  }}
+                  className="gap-1.5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar Sistema
+                </Button>
               </div>
             </div>
 

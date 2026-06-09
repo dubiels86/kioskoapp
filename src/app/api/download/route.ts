@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { readFile, stat } from 'fs/promises'
 import { join } from 'path'
+import { APP_VERSION } from '@/lib/version'
 
 export async function GET() {
   try {
@@ -17,9 +18,10 @@ export async function GET() {
       status: 200,
       headers: {
         'Content-Type': 'application/gzip',
-        'Content-Disposition': 'attachment; filename="kiosko-app.tar.gz"',
+        'Content-Disposition': `attachment; filename="kiosko-app-v${APP_VERSION}.tar.gz"`,
         'Content-Length': fileStat.size.toString(),
         'Cache-Control': 'public, max-age=3600',
+        'X-App-Version': APP_VERSION,
       },
     })
   } catch (error) {
