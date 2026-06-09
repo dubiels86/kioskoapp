@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import {
   Table,
   TableBody,
@@ -243,19 +244,28 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label>Proveedor</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sin proveedor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin proveedor</SelectItem>
-                  {suppliers.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CreatableSelect
+                options={[
+                  { value: 'none', label: 'Sin proveedor' },
+                  ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+                value={supplierId}
+                onValueChange={setSupplierId}
+                onCreate={async (name) => {
+                  const res = await fetch('/api/suppliers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                  })
+                  if (!res.ok) throw new Error('Error al crear proveedor')
+                  const supplier = await res.json()
+                  queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+                  return supplier.id
+                }}
+                placeholder="Sin proveedor"
+                searchPlaceholder="Buscar proveedor..."
+                createLabel="Crear '{0}'"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="invoice">Factura</Label>

@@ -107,3 +107,46 @@ Stage Summary:
 - Run with: bun run scripts/create-super-admin.ts OR bun run create-super-admin
 - User: dubiel / Password: openpgpwd / Role: Super Administrador (all 18 permissions)
 - All auth endpoints verified working
+
+---
+Task ID: 4
+Agent: Main
+Task: Convert all select fields to creatable selects with on-the-fly creation + update script
+
+Work Log:
+- Explored entire project to find all 22+ select/dropdown fields across 13 component files
+- Created CreatableSelect component (Popover + Command/Combobox pattern) at src/components/ui/creatable-select.tsx
+- Updated product-form-dialog.tsx: Category and Unit selects are now creatable
+  - Category: Creates new category via POST /api/categories, returns new ID
+  - Unit: Saves custom units to Settings table (custom_units key), merges with hardcoded defaults
+- Updated purchase-form-dialog.tsx: Supplier select is now creatable
+  - Creates new supplier via POST /api/suppliers (name only), returns new ID
+- Updated expenses-view.tsx: Category and Payment Method selects are now creatable
+  - Custom categories stored in Settings (custom_expense_categories key)
+  - Custom payment methods stored in Settings (custom_expense_payment_methods key)
+  - Filter select updated to show all categories (built-in + custom)
+  - ExpenseFormData types updated to use string instead of specific enum types
+- Updated users-tab.tsx: Role select is now creatable
+  - Creates new role via POST /api/roles with basic permissions
+- Updated settings API route.ts: Added 3 new default settings under 'custom_options' group
+  - custom_units (JSON array)
+  - custom_expense_categories (JSON array)
+  - custom_expense_payment_methods (JSON array)
+- Created scripts/update-system.ts: Comprehensive update script for downloaded projects
+  - Verifies database connection
+  - Ensures all default roles exist with correct permissions
+  - Creates/updates Super Admin user (dubiel/openpgpwd)
+  - Adds new custom_options settings
+  - Upgrades base64 passwords to bcrypt
+  - Assigns roles to users without valid roles
+  - Ensures default warehouses exist
+- Added "update-system" npm script to package.json
+- All lint checks pass with zero errors
+- All APIs tested and working (categories, suppliers, settings)
+
+Stage Summary:
+- 5 form fields now support creating items on the fly: Category, Unit, Supplier, Expense Category, Expense Payment Method, Role
+- Custom options (units, expense categories, payment methods) stored in Settings table
+- DB-backed entities (categories, suppliers, roles) created via their existing API endpoints
+- Update script at scripts/update-system.ts handles full system update for downloaded projects
+- Run: bun run update-system

@@ -34,6 +34,11 @@ const DEFAULT_SETTINGS = [
   // POS Mode
   { key: 'pos_type', value: '"kiosko"', label: 'Tipo de POS', group: 'pos' },         // kiosko | cafetería
   { key: 'pos_tables', value: '10', label: 'Cantidad de Mesas', group: 'pos' },       // Número de mesas (solo cafetería)
+
+  // Custom options (stored as JSON arrays)
+  { key: 'custom_units', value: '[]', label: 'Unidades Personalizadas', group: 'custom_options' },
+  { key: 'custom_expense_categories', value: '[]', label: 'Categorías de Gasto Personalizadas', group: 'custom_options' },
+  { key: 'custom_expense_payment_methods', value: '[]', label: 'Métodos de Pago de Gastos Personalizados', group: 'custom_options' },
 ]
 
 export async function GET() {

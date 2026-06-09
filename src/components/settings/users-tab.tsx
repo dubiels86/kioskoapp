@@ -13,9 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import { Plus, Edit, Trash2, Users, Key } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatDate } from '@/lib/format'
@@ -366,18 +364,29 @@ export function UsersTab() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">Rol *</Label>
-                <Select value={formRoleId} onValueChange={setFormRoleId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role.id} value={role.id}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CreatableSelect
+                  options={roles.map((role) => ({ value: role.id, label: role.name }))}
+                  value={formRoleId}
+                  onValueChange={setFormRoleId}
+                  onCreate={async (name) => {
+                    const res = await fetch('/api/roles', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        name,
+                        description: `Rol ${name}`,
+                        permissions: JSON.stringify(['pos.access']),
+                      }),
+                    })
+                    if (!res.ok) throw new Error('Error al crear rol')
+                    const role = await res.json()
+                    queryClient.invalidateQueries({ queryKey: ['roles'] })
+                    return role.id
+                  }}
+                  placeholder="Seleccionar rol..."
+                  searchPlaceholder="Buscar rol..."
+                  createLabel="Crear '{0}'"
+                />
               </div>
             </div>
           </div>

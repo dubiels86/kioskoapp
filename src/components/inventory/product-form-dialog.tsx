@@ -12,16 +12,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import { ImagePlus, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface Category {
   id: string
@@ -60,6 +54,23 @@ const UNITS = [
 export function ProductFormDialog({ open, onOpenChange, product, categories }: ProductFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!product
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error al obtener configuración')
+      return res.json() as Promise<Record<string, { key: string; value: string; label: string }[]>>
+    },
+  })
+
+  const customUnits: string[] = settings?.custom_options?.find(s => s.key === 'custom_units')?.value
+    ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_units')!.value)
+    : []
+  const ALL_UNITS = [
+    ...UNITS,
+    ...customUnits.filter(u => !UNITS.some(u2 => u2.value === u)).map(u => ({ value: u, label: u.charAt(0).toUpperCase() + u.slice(1) })),
+  ]
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [name, setName] = useState('')
@@ -302,19 +313,28 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
 
           <div className="grid gap-2">
             <Label htmlFor="category">Categoría</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sin categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin categoría</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              options={[
+                { value: 'none', label: 'Sin categoría' },
+                ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
+              ]}
+              value={categoryId}
+              onValueChange={setCategoryId}
+              onCreate={async (name) => {
+                const res = await fetch('/api/categories', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+                })
+                if (!res.ok) throw new Error('Error al crear categoría')
+                const cat = await res.json()
+                queryClient.invalidateQueries({ queryKey: ['categories'] })
+                return cat.id
+              }}
+              placeholder="Sin categoría"
+              searchPlaceholder="Buscar categoría..."
+              createLabel="Crear '{0}'"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -371,18 +391,26 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
 
           <div className="grid gap-2">
             <Label htmlFor="unit">Unidad</Label>
-            <Select value={unit} onValueChange={setUnit}>
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {UNITS.map((u) => (
-                  <SelectItem key={u.value} value={u.value}>
-                    {u.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              options={ALL_UNITS.map((u) => ({ value: u.value, label: u.label }))}
+              value={unit}
+              onValueChange={setUnit}
+              onCreate={async (newUnit) => {
+                // Save custom unit to settings
+                const currentCustomUnits = customUnits
+                const updated = [...currentCustomUnits, newUnit]
+                await fetch('/api/settings', {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ custom_units: JSON.stringify(updated) }),
+                })
+                queryClient.invalidateQueries({ queryKey: ['settings'] })
+                return newUnit
+              }}
+              placeholder="Seleccionar unidad..."
+              searchPlaceholder="Buscar unidad..."
+              createLabel="Crear '{0}'"
+            />
           </div>
         </div>
 

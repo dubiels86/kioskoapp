@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import {
   Table,
   TableBody,
@@ -92,8 +93,8 @@ const PAYMENT_ICONS: Record<string, React.ComponentType<{ className?: string }>>
 interface ExpenseFormData {
   description: string
   amount: string
-  category: ExpenseCategory
-  paymentMethod: ExpensePaymentMethod
+  category: string
+  paymentMethod: string
   date: string
   recipient: string
   receiptNumber: string
@@ -122,6 +123,25 @@ export function ExpensesView() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [form, setForm] = useState<ExpenseFormData>(emptyForm)
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error al obtener configuración')
+      return res.json() as Promise<Record<string, { key: string; value: string; label: string }[]>>
+    },
+  })
+
+  const customExpCategories: string[] = settings?.custom_options?.find((s: { key: string; value: string; label: string }) => s.key === 'custom_expense_categories')?.value
+    ? JSON.parse(settings.custom_options.find((s: { key: string; value: string; label: string }) => s.key === 'custom_expense_categories')!.value)
+    : []
+  const ALL_EXPENSE_CATEGORIES = [...EXPENSE_CATEGORIES, ...customExpCategories.filter((c: string) => !EXPENSE_CATEGORIES.includes(c as ExpenseCategory))]
+
+  const customExpPayMethodsRaw: string[] = settings?.custom_options?.find((s: { key: string; value: string; label: string }) => s.key === 'custom_expense_payment_methods')?.value
+    ? JSON.parse(settings.custom_options.find((s: { key: string; value: string; label: string }) => s.key === 'custom_expense_payment_methods')!.value)
+    : []
+  const ALL_EXPENSE_PAYMENT_METHODS = [...EXPENSE_PAYMENT_METHODS, ...customExpPayMethodsRaw.filter((m: string) => !EXPENSE_PAYMENT_METHODS.includes(m as ExpensePaymentMethod))]
 
   // Build query params
   const queryParams = new URLSearchParams()
@@ -331,9 +351,9 @@ export function ExpensesView() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {EXPENSE_CATEGORIES.map((cat) => (
+                  {ALL_EXPENSE_CATEGORIES.map((cat) => (
                     <SelectItem key={cat} value={cat}>
-                      {EXPENSE_CATEGORY_LABELS[cat]}
+                      {EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory] || cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase()}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -553,21 +573,29 @@ export function ExpensesView() {
               </div>
               <div className="space-y-2">
                 <Label>Categoría</Label>
-                <Select
+                <CreatableSelect
+                  options={ALL_EXPENSE_CATEGORIES.map((cat) => ({
+                    value: cat,
+                    label: EXPENSE_CATEGORY_LABELS[cat as ExpenseCategory] || cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase(),
+                  }))}
                   value={form.category}
                   onValueChange={(v) => setForm({ ...form, category: v as ExpenseCategory })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {EXPENSE_CATEGORY_LABELS[cat]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onCreate={async (name) => {
+                    const key = name.toUpperCase().replace(/\s+/g, '_')
+                    const current = customExpCategories
+                    const updated = [...current, key]
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ custom_expense_categories: JSON.stringify(updated) }),
+                    })
+                    queryClient.invalidateQueries({ queryKey: ['settings'] })
+                    return key as ExpenseCategory
+                  }}
+                  placeholder="Seleccionar categoría..."
+                  searchPlaceholder="Buscar categoría..."
+                  createLabel="Crear '{0}'"
+                />
               </div>
             </div>
 
@@ -575,21 +603,29 @@ export function ExpensesView() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Método de Pago</Label>
-                <Select
+                <CreatableSelect
+                  options={ALL_EXPENSE_PAYMENT_METHODS.map((method) => ({
+                    value: method,
+                    label: EXPENSE_PAYMENT_LABELS[method as ExpensePaymentMethod] || method.charAt(0).toUpperCase() + method.slice(1).toLowerCase(),
+                  }))}
                   value={form.paymentMethod}
                   onValueChange={(v) => setForm({ ...form, paymentMethod: v as ExpensePaymentMethod })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EXPENSE_PAYMENT_METHODS.map((method) => (
-                      <SelectItem key={method} value={method}>
-                        {EXPENSE_PAYMENT_LABELS[method]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onCreate={async (name) => {
+                    const key = name.toUpperCase().replace(/\s+/g, '_')
+                    const current = customExpPayMethodsRaw
+                    const updated = [...current, key]
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ custom_expense_payment_methods: JSON.stringify(updated) }),
+                    })
+                    queryClient.invalidateQueries({ queryKey: ['settings'] })
+                    return key as ExpensePaymentMethod
+                  }}
+                  placeholder="Seleccionar método..."
+                  searchPlaceholder="Buscar método..."
+                  createLabel="Crear '{0}'"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="exp-date">Fecha</Label>
