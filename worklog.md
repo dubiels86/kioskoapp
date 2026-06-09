@@ -81,3 +81,29 @@ Stage Summary:
 - 4 default roles: Administrador, Vendedor, Cajero, Depósito
 - Update script (update-v3.sh + update-v3.tar.gz) for existing downloaded projects
 - Migration script (migrate-add-auth.ts) for existing databases
+
+---
+Task ID: 3
+Agent: Main
+Task: Create script for super admin user "dubiel" with password "openpgpwd"
+
+Work Log:
+- Read existing seed.ts and migrate-add-auth.ts to understand the project patterns
+- Read the full auth system (auth.ts, login API, store.ts, login-view.tsx, page.tsx)
+- Created /scripts/create-super-admin.ts script that:
+  - Creates or updates "Super Administrador" role with ALL 18 permissions
+  - Creates user "dubiel" with password "openpgpwd" if not exists
+  - Updates existing user "dubiel" (password + role) if already exists
+  - Verifies the user was created correctly after creation
+  - Uses bcrypt hashing (same as the rest of the auth system)
+- Added "create-super-admin" npm script to package.json for easy running
+- Ran the script successfully: created "Super Administrador" role + "dubiel" user
+- Verified login works via curl: POST /api/auth/login returns user with all 18 permissions
+- Verified page loads correctly with login screen (title: "KioskoApp - Sistema de Gestión")
+- Verified session check works: unauthenticated returns {"authenticated":false}
+
+Stage Summary:
+- Script created at: /scripts/create-super-admin.ts
+- Run with: bun run scripts/create-super-admin.ts OR bun run create-super-admin
+- User: dubiel / Password: openpgpwd / Role: Super Administrador (all 18 permissions)
+- All auth endpoints verified working
