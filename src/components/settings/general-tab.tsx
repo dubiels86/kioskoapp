@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Store, Save, Coffee, ShoppingBag, Info, RefreshCw, Download } from 'lucide-react'
+import { Store, Save, Coffee, ShoppingBag, Info, RefreshCw, Download, PackageOpen, FileCode } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import type { PosType } from '@/lib/store'
@@ -315,7 +315,7 @@ export function GeneralTab() {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="space-y-3 mt-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -335,17 +335,54 @@ export function GeneralTab() {
                   <RefreshCw className="h-3.5 w-3.5" />
                   Verificar Versión
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.open('/api/download', '_blank')
-                  }}
-                  className="gap-1.5"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Descargar Sistema
-                </Button>
+                
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-medium">Descargas para actualizar un sistema ya instalado:</p>
+                  <p className="text-xs text-muted-foreground">Descargá estos 2 archivos y copialos a la raíz de tu proyecto existente. Luego ejecutá: <code className="bg-muted px-1 py-0.5 rounded text-xs">chmod +x update.sh &amp;&amp; ./update.sh</code></p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        window.open('/api/download?type=update', '_blank')
+                        toast.success('Descargando paquete de actualización (~150KB)')
+                      }}
+                      className="gap-1.5"
+                    >
+                      <PackageOpen className="h-3.5 w-3.5" />
+                      update.tar.gz
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        window.open('/api/download-update', '_blank')
+                        toast.success('Descargando script de actualización')
+                      }}
+                      className="gap-1.5"
+                    >
+                      <FileCode className="h-3.5 w-3.5" />
+                      update.sh
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-medium">Instalación nueva (desde cero):</p>
+                  <p className="text-xs text-muted-foreground">Paquete completo con todos los archivos. Extraé y ejecutá: <code className="bg-muted px-1 py-0.5 rounded text-xs">bun install &amp;&amp; bun run dev</code></p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      window.open('/api/download', '_blank')
+                      toast.success('Descargando sistema completo (~60MB)')
+                    }}
+                    className="gap-1.5"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    kiosko-app.tar.gz (Completo)
+                  </Button>
+                </div>
               </div>
             </div>
 
