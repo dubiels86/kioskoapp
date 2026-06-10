@@ -15,7 +15,7 @@
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
-const APP_VERSION = '0.5.0'
+const APP_VERSION = '0.6.0'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
 const SUPER_ADMIN_PASSWORD = 'openpgpwd'

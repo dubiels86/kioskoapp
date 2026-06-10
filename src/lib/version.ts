@@ -4,12 +4,20 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.5.0'
+export const APP_VERSION = '0.6.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
+  '0.6.0': [
+    'Reportes por rango de fechas',
+    'Tab de Gastos en reportes',
+    'Tab de Productos más vendidos',
+    'Evolución de ventas por día (modo rango)',
+    'Ganancia neta (ventas - costo - gastos)',
+    'Compras incluidas en reportes',
+  ],
   '0.5.0': [
     'Sistema de monedas múltiples',
     'Tipos de cambio entre monedas',
