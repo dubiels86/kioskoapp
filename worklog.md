@@ -46,3 +46,36 @@ Stage Summary:
 - Fixed selects that remain: currency locale, decimals, repair status, cash movement type, purchase status filter, movement type filter (these are fixed enums/filters)
 - Warehouse API now supports minimal creation (name only) for on-the-fly creation
 - 4 new custom_options settings added for storing user-created options
+
+---
+Task ID: 1
+Agent: main
+Task: Implement multi-currency system with exchange rates
+
+Work Log:
+- Analyzed full codebase structure (Prisma schema, 35 API routes, 20+ components, Zustand store)
+- Added Currency and ExchangeRateHistory models to Prisma schema
+- Pushed schema changes to database with `bun run db:push`
+- Updated format.ts to support dynamic currency formatting with cache
+- Created API endpoints: GET/POST /api/currencies, GET/PUT/DELETE /api/currencies/[id], GET /api/currencies/active, GET /api/currencies/exchange-rates
+- Created comprehensive currency-tab.tsx component with full CRUD, preset currencies, exchange rate editor, history dialog
+- Created CurrencySelector component for sidebar display currency switching
+- Created useCurrencies hook for currency data and conversion functions
+- Created useCurrencyFormat hook for reactive currency formatting in components
+- Updated app-sidebar.tsx to include CurrencySelector
+- Updated Zustand store with activeCurrency state
+- Updated version to 0.5.0 in version.ts, package.json, update.sh
+- Updated update-system.ts migration script to create default currency from settings
+- Ran migration to create ARS as base currency
+- Created USD and EUR currencies via API for testing
+- Built update packages (kiosko-app.tar.gz 59.1MB, update.tar.gz 159KB)
+- All lint checks pass
+
+Stage Summary:
+- Multi-currency system fully functional
+- 3 currencies in DB: ARS (base, rate=1), USD (rate=1200), EUR (rate=1300)
+- All API endpoints tested and working
+- Currency management UI in Settings → Monedas
+- Currency selector in sidebar for quick switching
+- formatCurrency() auto-uses cached base currency
+- Version bumped to 0.5.0

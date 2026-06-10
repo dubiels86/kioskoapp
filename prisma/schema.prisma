@@ -271,6 +271,30 @@ model Expense {
   updatedAt       DateTime      @updatedAt
 }
 
+model Currency {
+  id          String   @id @default(cuid())
+  code        String   @unique   // ISO 4217 code: ARS, USD, EUR, etc.
+  name        String             // Argentine Peso, US Dollar, etc.
+  symbol      String             // $, US$, €, etc.
+  locale      String   @default("es-AR") // For Intl.NumberFormat
+  isBase      Boolean  @default(false)   // Is this the base (primary) currency?
+  exchangeRate Float   @default(1)       // Rate relative to base currency (1 base = X of this currency)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ExchangeRateHistory {
+  id           String   @id @default(cuid())
+  fromCurrency String             // ISO code
+  toCurrency   String             // ISO code
+  rate         Float              // 1 fromCurrency = X toCurrency
+  source       String  @default("manual") // manual, api
+  createdAt    DateTime @default(now())
+
+  @@index([fromCurrency, toCurrency, createdAt])
+}
+
 model Setting {
   id    String @id @default(cuid())
   key   String @unique

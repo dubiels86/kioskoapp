@@ -15,7 +15,7 @@
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
-const APP_VERSION = '0.4.0'
+const APP_VERSION = '0.5.0'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
 const SUPER_ADMIN_PASSWORD = 'openpgpwd'
@@ -246,7 +246,48 @@ async function updateSystem() {
     }
 
     // ========================================
-    // 8. Registrar versión del sistema
+    // 8. Asegurar monedas por defecto
+    // ========================================
+    console.log('')
+    console.log('💱 Verificando monedas...')
+    const currencyCount = await db.currency.count()
+    if (currencyCount === 0) {
+      // Try to get current currency from settings
+      const codeSetting = await db.setting.findUnique({ where: { key: 'currency_code' } })
+      const symbolSetting = await db.setting.findUnique({ where: { key: 'currency_symbol' } })
+      const localeSetting = await db.setting.findUnique({ where: { key: 'currency_locale' } })
+
+      const code = codeSetting ? JSON.parse(codeSetting.value) : 'ARS'
+      const symbol = symbolSetting ? JSON.parse(symbolSetting.value) : '$'
+      const locale = localeSetting ? JSON.parse(localeSetting.value) : 'es-AR'
+
+      // Get currency name from code
+      const currencyNames: Record<string, string> = {
+        ARS: 'Peso Argentino', USD: 'Dólar Estadounidense', EUR: 'Euro',
+        BRL: 'Real Brasileño', MXN: 'Peso Mexicano', COP: 'Peso Colombiano',
+        CLP: 'Peso Chileno', PEN: 'Sol Peruano', UYU: 'Peso Uruguayo',
+        VES: 'Bolívar Venezolano', BOB: 'Boliviano', PYG: 'Guaraní Paraguayo',
+        CUP: 'Peso Cubano', GBP: 'Libra Esterlina',
+      }
+
+      await db.currency.create({
+        data: {
+          code,
+          name: currencyNames[code] || 'Moneda Principal',
+          symbol,
+          locale,
+          isBase: true,
+          exchangeRate: 1,
+          isActive: true,
+        },
+      })
+      console.log(`  ✅ Moneda principal creada: ${code} (${symbol})`)
+    } else {
+      console.log(`  ✅ ${currencyCount} monedas existentes`)
+    }
+
+    // ========================================
+    // 9. Registrar versión del sistema
     // ========================================
     console.log('')
     console.log('🏷️  Registrando versión del sistema...')
@@ -277,13 +318,12 @@ async function updateSystem() {
     console.log(`   🔐 Contraseñas verificadas`)
     console.log('')
     console.log('🆕 Nuevas funcionalidades en esta versión:')
-    console.log('   • Sistema de actualización automática')
-    console.log('   • Verificación de versión desde la configuración')
-    console.log('   • Script de actualización completo (update.sh)')
-    console.log('   • Unidades personalizadas almacenadas en configuración')
-    console.log('   • Categorías y métodos de pago de gastos personalizables')
-    console.log('   • Sistema de Login y Autenticación')
-    console.log('   • Permisos por rol en la navegación')
+    console.log('   • Sistema de monedas múltiples')
+    console.log('   • Tipos de cambio entre monedas')
+    console.log('   • Selector de moneda en el sidebar')
+    console.log('   • Historial de cambios de tipo de cambio')
+    console.log('   • Conversión en tiempo real al visualizar precios')
+    console.log('   • Moneda principal configurable')
 
   } catch (error) {
     console.error('')

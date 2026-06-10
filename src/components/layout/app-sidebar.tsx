@@ -4,6 +4,7 @@ import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Setti
 import { useAppStore } from '@/lib/store'
 import type { AppView, RolePermission } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { CurrencySelector } from '@/components/layout/currency-selector'
 
 interface NavItem {
   view: AppView
@@ -127,6 +128,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
           <span className="text-xs font-medium text-slate-300">
             Caja: {cashOpen ? 'ABIERTA' : 'CERRADA'}
           </span>
+        </div>
+
+        {/* Currency Selector */}
+        <div className="px-1">
+          <CurrencySelector />
         </div>
 
         {/* User Info & Logout */}

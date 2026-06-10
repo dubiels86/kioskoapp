@@ -4,12 +4,20 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.4.0'
+export const APP_VERSION = '0.5.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
+  '0.5.0': [
+    'Sistema de monedas múltiples',
+    'Tipos de cambio entre monedas',
+    'Selector de moneda en el sidebar',
+    'Historial de cambios de tipo de cambio',
+    'Conversión en tiempo real al visualizar precios',
+    'Moneda principal configurable',
+  ],
   '0.4.0': [
     'Sistema de actualización automática',
     'Verificación de versión desde la configuración',
