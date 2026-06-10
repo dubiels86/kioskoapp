@@ -64,9 +64,12 @@ interface Sale {
   costTotal: number
   subtotal: number
   discount: number
+  cashReceived: number | null
+  changeAmount: number | null
   customerName: string | null
   createdAt: string
   items: SaleItem[]
+  payments: Array<{ id: string; method: string; amount: number }>
   cashRegister: { id: string; openingAmount: number; closingAmount: number | null; expectedAmount: number | null; difference: number | null; openedAt: string; closedAt: string | null } | null
 }
 
@@ -80,11 +83,7 @@ interface Report {
   totalCostOfGoods: number
   grossProfit: number
   totalDiscount: number
-  salesByMethod: {
-    EFECTIVO: { count: number; total: number }
-    TARJETA: { count: number; total: number }
-    CUENTA_CASA: { count: number; total: number; costTotal: number }
-  }
+  salesByMethod: Record<string, { count: number; total: number; costTotal: number }>
   salesByDay: Record<string, { count: number; total: number; costTotal: number }>
   topProducts: Array<{ name: string; quantity: number; total: number; costTotal: number }>
   totalExpenses: number
@@ -234,11 +233,17 @@ export function ReportsView() {
   }
 
   const maxMethodTotal = Math.max(
-    report.salesByMethod.EFECTIVO.total,
-    report.salesByMethod.TARJETA.total,
-    report.salesByMethod.CUENTA_CASA.total,
+    ...Object.values(report.salesByMethod).map(m => m.total),
     1
   )
+
+  // Payment method display config for dynamic methods
+  const METHOD_DISPLAY: Record<string, { color: string; bgLight: string }> = {
+    EFECTIVO: { color: 'bg-emerald-500', bgLight: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30' },
+    TARJETA: { color: 'bg-amber-500', bgLight: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30' },
+    CUENTA_CASA: { color: 'bg-violet-500', bgLight: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30' },
+  }
+  const getMethodDisplay = (method: string) => METHOD_DISPLAY[method] || { color: 'bg-slate-400', bgLight: 'bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400 border border-slate-200 dark:border-slate-800/30' }
 
   // Sort salesByDay for the chart
   const sortedDays = Object.entries(report.salesByDay).sort(([a], [b]) => a.localeCompare(b))
@@ -459,28 +464,30 @@ export function ReportsView() {
                 <CardTitle className="text-base">Ventas por Método de Pago</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {[
-                  { method: 'EFECTIVO' as PaymentMethod, data: report.salesByMethod.EFECTIVO, color: 'bg-emerald-500', bgLight: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/30' },
-                  { method: 'TARJETA' as PaymentMethod, data: report.salesByMethod.TARJETA, color: 'bg-amber-500', bgLight: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30' },
-                  { method: 'CUENTA_CASA' as PaymentMethod, data: report.salesByMethod.CUENTA_CASA, color: 'bg-violet-500', bgLight: 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30' },
-                ].map(({ method, data, color, bgLight }) => (
-                  <div key={method} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className={bgLight}>
-                          {PAYMENT_METHOD_LABELS[method]}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {data.count} {data.count === 1 ? 'venta' : 'ventas'}
-                        </span>
+                {Object.entries(report.salesByMethod)
+                  .filter(([, data]) => data.total > 0)
+                  .sort(([, a], [, b]) => b.total - a.total)
+                  .map(([method, data]) => {
+                    const { color, bgLight } = getMethodDisplay(method)
+                    return (
+                      <div key={method} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className={bgLight}>
+                              {(PAYMENT_METHOD_LABELS as Record<string, string>)[method] || method}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {data.count} {data.count === 1 ? 'pago' : 'pagos'}
+                            </span>
+                          </div>
+                          <span className="font-semibold">{formatCurrency(data.total)}</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                          <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${Math.max((data.total / maxMethodTotal) * 100, 0)}%` }} />
+                        </div>
                       </div>
-                      <span className="font-semibold">{formatCurrency(data.total)}</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                      <div className={`h-full rounded-full ${color} transition-all duration-500`} style={{ width: `${Math.max((data.total / maxMethodTotal) * 100, 0)}%` }} />
-                    </div>
-                  </div>
-                ))}
+                    )
+                  })}
 
                 {/* Discount total */}
                 {report.totalDiscount > 0 && (
@@ -562,9 +569,22 @@ export function ReportsView() {
                             <TableCell className="text-xs text-muted-foreground">{sale.invoiceNumber}</TableCell>
                             <TableCell className="text-sm">{sale.customerName || 'Consumidor Final'}</TableCell>
                             <TableCell>
-                              <Badge variant="secondary" className="text-xs">
-                                {PAYMENT_METHOD_LABELS[sale.paymentMethod as PaymentMethod] || sale.paymentMethod}
-                              </Badge>
+                              {sale.payments && sale.payments.length > 1 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {sale.payments.map((p, i) => (
+                                    <Badge key={i} variant="secondary" className="text-[10px]">
+                                      {(PAYMENT_METHOD_LABELS as Record<string, string>)[p.method] || p.method}: {formatCurrency(p.amount)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <Badge variant="secondary" className="text-xs">
+                                  {sale.payments?.[0]
+                                    ? `${(PAYMENT_METHOD_LABELS as Record<string, string>)[sale.payments[0].method] || sale.payments[0].method}`
+                                    : (PAYMENT_METHOD_LABELS as Record<string, string>)[sale.paymentMethod] || sale.paymentMethod
+                                  }
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">
                               {sale.items.map((i) => i.product.name).join(', ') || '-'}

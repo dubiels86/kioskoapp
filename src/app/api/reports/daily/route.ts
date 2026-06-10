@@ -51,17 +51,33 @@ export async function GET(request: Request) {
     const grossProfit = totalSalesAmount - totalCostOfGoods
     const totalDiscount = sales.reduce((sum, s) => sum + s.discount, 0)
 
-    // Sales grouped by payment method
+    // Sales grouped by payment method — use individual SalePayment records
+    // so that MIXTO (split) sales are properly attributed to each method
     const normalizeMethod = (m: string) => m === 'TRANSFERENCIA' ? 'TARJETA' : m
-    const salesByMethod = {
-      EFECTIVO: { count: 0, total: 0 },
-      TARJETA: { count: 0, total: 0 },
-      CUENTA_CASA: { count: 0, total: 0, costTotal: 0 },
-    }
+    const salesByMethod: Record<string, { count: number; total: number; costTotal: number }> = {}
 
     for (const sale of sales) {
-      const method = normalizeMethod(sale.paymentMethod) as keyof typeof salesByMethod
-      if (salesByMethod[method]) {
+      if (sale.payments && sale.payments.length > 0) {
+        // Use individual payment records for proper split attribution
+        for (const payment of sale.payments) {
+          const method = normalizeMethod(payment.method)
+          if (!salesByMethod[method]) {
+            salesByMethod[method] = { count: 0, total: 0, costTotal: 0 }
+          }
+          salesByMethod[method].count++
+          salesByMethod[method].total += payment.amount
+          // For CUENTA_CASA payments, attribute the sale's costTotal proportionally
+          if (method === 'CUENTA_CASA' && sale.total > 0) {
+            const proportion = payment.amount / sale.total
+            salesByMethod[method].costTotal += sale.costTotal * proportion
+          }
+        }
+      } else {
+        // Fallback for legacy sales without payment records
+        const method = normalizeMethod(sale.paymentMethod)
+        if (!salesByMethod[method]) {
+          salesByMethod[method] = { count: 0, total: 0, costTotal: 0 }
+        }
         salesByMethod[method].count++
         salesByMethod[method].total += sale.total
         if (method === 'CUENTA_CASA') {
@@ -69,6 +85,11 @@ export async function GET(request: Request) {
         }
       }
     }
+
+    // Ensure the 3 main methods always exist in the response
+    if (!salesByMethod.EFECTIVO) salesByMethod.EFECTIVO = { count: 0, total: 0, costTotal: 0 }
+    if (!salesByMethod.TARJETA) salesByMethod.TARJETA = { count: 0, total: 0, costTotal: 0 }
+    if (!salesByMethod.CUENTA_CASA) salesByMethod.CUENTA_CASA = { count: 0, total: 0, costTotal: 0 }
 
     // Sales by day (for range charts)
     const salesByDay: Record<string, { count: number; total: number; costTotal: number }> = {}

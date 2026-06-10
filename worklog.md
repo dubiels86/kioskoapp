@@ -79,3 +79,33 @@ Stage Summary:
 - Currency selector in sidebar for quick switching
 - formatCurrency() auto-uses cached base currency
 - Version bumped to 0.5.0
+---
+Task ID: 1
+Agent: main
+Task: Implement split payment reporting fix and cash received/change feature
+
+Work Log:
+- Analyzed current POS payment flow: Sale → SalePayment[], PaymentDialog, POSView, Reports API
+- Identified key bug: Reports API groups by Sale.paymentMethod ("MIXTO") instead of individual SalePayment records
+- Added cashReceived and changeAmount fields to Sale model in Prisma schema
+- Ran db:push to sync schema
+- Updated PaymentDialog to export PaymentResult type with cashReceived/changeAmount
+- Updated PaymentDialog to show discount in summary, add quick cash amount buttons
+- Updated POSView to pass discount to PaymentDialog and handle PaymentResult
+- Updated Sale API to accept and persist cashReceived/changeAmount, validate payments sum >= total
+- Rewrote Reports API salesByMethod aggregation to use SalePayment records instead of Sale.paymentMethod
+- Reports now properly attribute MIXTO sales to individual payment methods (EFECTIVO, TARJETA, etc.)
+- Added fallback for legacy sales without SalePayment records
+- Updated ReceiptDialog to show cashReceived and changeAmount
+- Updated ReportsView interface to use dynamic Record<string, {count, total, costTotal}> for salesByMethod
+- Updated payment method display in reports to support dynamic methods (not just 3 hardcoded)
+- Updated sales list in reports to show split payment details with per-method amounts
+- Lint passes cleanly
+- API tested via curl - returns correct salesByMethod structure
+
+Stage Summary:
+- Split payment reporting now works correctly - each SalePayment.amount is attributed to its method
+- Cash received (dinero entregado) and change (vuelto) are now persisted and displayed
+- PaymentDialog shows discount in summary and has quick cash amount buttons
+- Receipt shows vuelto information
+- Server OOM in sandbox prevents full browser testing, but code compiles and APIs work via curl

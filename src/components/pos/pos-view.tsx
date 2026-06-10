@@ -21,6 +21,7 @@ import {
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { WarehouseType, PaymentEntry } from '@/lib/types'
+import type { PaymentResult } from '@/components/pos/payment-dialog'
 import type { PosType } from '@/lib/store'
 
 interface CashRegisterData {
@@ -48,6 +49,8 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
+  cashReceived?: number | null
+  changeAmount?: number | null
   tableNumber: number | null
   customerName?: string | null
   items: SaleItemData[]
@@ -193,13 +196,13 @@ export function POSView() {
   }, [cashRegister, setCurrentCashRegisterId])
 
   // Process sale with payments
-  const handleProcessSale = (payments: PaymentEntry[], customerName: string) => {
-    processSaleMutation.mutate({ payments, customerName })
+  const handleProcessSale = (result: PaymentResult) => {
+    processSaleMutation.mutate(result)
   }
 
   // Process sale mutation
   const processSaleMutation = useMutation({
-    mutationFn: async ({ payments, customerName }: { payments: PaymentEntry[]; customerName: string }) => {
+    mutationFn: async ({ payments, customerName, cashReceived, changeAmount }: PaymentResult) => {
       if (!currentCashRegisterId) {
         throw new Error('No hay una caja abierta')
       }
@@ -233,6 +236,8 @@ export function POSView() {
           warehouseId: selectedWarehouseId,
           customerName: customerName || undefined,
           tableNumber: isCafeteria ? selectedTable : undefined,
+          cashReceived: cashReceived || undefined,
+          changeAmount: changeAmount || undefined,
           payments: payments.map((p) => ({ method: p.method, amount: p.amount })),
           items: cart.map((item) => ({
             productId: item.productId,
@@ -456,6 +461,7 @@ export function POSView() {
         onOpenChange={setPaymentDialogOpen}
         onConfirm={handleProcessSale}
         isProcessing={processSaleMutation.isPending}
+        discount={discount}
       />
       <ReceiptDialog
         open={receiptDialogOpen}

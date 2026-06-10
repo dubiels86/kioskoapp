@@ -28,6 +28,8 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
+  cashReceived?: number | null
+  changeAmount?: number | null
   tableNumber?: number | null
   customerName?: string | null
   notes?: string | null
@@ -184,6 +186,25 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
                 </span>
               </div>
             </div>
+
+            {/* Cash Received / Change */}
+            {sale.cashReceived != null && sale.cashReceived > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">Efectivo recibido</span>
+                    <span className="text-slate-900 dark:text-slate-100">{formatCurrency(sale.cashReceived)}</span>
+                  </div>
+                  {sale.changeAmount != null && sale.changeAmount > 0 && (
+                    <div className="flex justify-between font-bold text-sm">
+                      <span className="text-emerald-700 dark:text-emerald-400">Vuelto</span>
+                      <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(sale.changeAmount)}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {sale.paymentMethod === 'CUENTA_CASA' && (
               <>

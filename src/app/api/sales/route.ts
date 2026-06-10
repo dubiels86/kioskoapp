@@ -71,6 +71,8 @@ export async function POST(request: Request) {
       warehouseId, // Global warehouse for all items
       payments, // Array of { method, amount }
       tableNumber, // Mesa number (cafeteria mode)
+      cashReceived, // Efectivo entregado por el cliente
+      changeAmount, // Vuelto entregado al cliente
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -103,6 +105,8 @@ export async function POST(request: Request) {
         )
       }
     }
+
+    // Validate payments sum >= total (we'll check after calculating total below)
 
     // Validate global warehouseId if provided
     if (warehouseId) {
@@ -188,6 +192,12 @@ export async function POST(request: Request) {
       const discountAmount = discount ? parseFloat(discount) : 0
       const total = subtotal - discountAmount
 
+      // Validate that payments sum >= total
+      const paymentsSum = payments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
+      if (paymentsSum < total) {
+        throw new Error(`Los pagos ($${paymentsSum.toFixed(2)}) no cubren el total ($${total.toFixed(2)})`)
+      }
+
       // Generate invoice number
       const latestSale = await tx.sale.findFirst({
         orderBy: { createdAt: 'desc' },
@@ -218,6 +228,8 @@ export async function POST(request: Request) {
           discount: discountAmount,
           total,
           costTotal,
+          cashReceived: cashReceived || null,
+          changeAmount: changeAmount || null,
           tableNumber: tableNumber || null,
           customerName: customerName || null,
           notes: notes || null,

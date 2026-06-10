@@ -133,6 +133,8 @@ model Sale {
   discount        Float         @default(0)
   total           Float
   costTotal       Float         // Total al precio de costo
+  cashReceived    Float?        // Efectivo entregado por el cliente
+  changeAmount    Float?        // Vuelto entregado al cliente
   tableNumber     Int?          // Número de mesa (solo para modo cafetería)
   customerName    String?
   notes           String?

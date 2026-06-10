@@ -28,11 +28,19 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
+export interface PaymentResult {
+  payments: PaymentEntry[]
+  customerName: string
+  cashReceived: number
+  changeAmount: number
+}
+
 interface PaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (payments: PaymentEntry[], customerName: string) => void
+  onConfirm: (result: PaymentResult) => void
   isProcessing: boolean
+  discount: number
 }
 
 const METHOD_ICONS: Record<PaymentMethod, React.ComponentType<{ className?: string }>> = {
@@ -43,7 +51,7 @@ const METHOD_ICONS: Record<PaymentMethod, React.ComponentType<{ className?: stri
 
 const METHOD_COLORS: Record<PaymentMethod, string> = {
   EFECTIVO: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
-  TARJETA: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+  TARJETA: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
   CUENTA_CASA: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800',
 }
 
@@ -54,6 +62,7 @@ export function PaymentDialog({
   onOpenChange,
   onConfirm,
   isProcessing,
+  discount,
 }: PaymentDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,6 +72,7 @@ export function PaymentDialog({
             onConfirm={onConfirm}
             isProcessing={isProcessing}
             onCancel={() => onOpenChange(false)}
+            discount={discount}
           />
         )}
       </DialogContent>
@@ -74,10 +84,12 @@ function PaymentDialogContent({
   onConfirm,
   isProcessing,
   onCancel,
+  discount,
 }: {
-  onConfirm: (payments: PaymentEntry[], customerName: string) => void
+  onConfirm: (result: PaymentResult) => void
   isProcessing: boolean
   onCancel: () => void
+  discount: number
 }) {
   const { cart, cartSubtotal, posType, selectedTable } = useAppStore()
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: 'EFECTIVO', amount: 0 }])
@@ -104,13 +116,15 @@ function PaymentDialogContent({
 
   const isCafeteria = posType === 'cafeteria'
   const subtotal = cartSubtotal()
-  const total = subtotal
+  const total = subtotal - discount
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
   const remaining = total - totalPaid
 
-  const cashPaymentIndex = payments.findIndex((p) => p.method === 'EFECTIVO')
+  const cashPaymentAmount = payments
+    .filter(p => p.method === 'EFECTIVO')
+    .reduce((sum, p) => sum + p.amount, 0)
   const cashReceivedNum = parseFloat(cashReceived) || 0
-  const cashChange = cashPaymentIndex >= 0 ? cashReceivedNum - payments[cashPaymentIndex].amount : 0
+  const cashChange = cashPaymentAmount > 0 ? cashReceivedNum - cashPaymentAmount : 0
 
   const canConfirm = totalPaid >= total && total > 0
 
@@ -146,6 +160,29 @@ function PaymentDialogContent({
     setPayments(newPayments)
   }
 
+  const handleConfirm = () => {
+    onConfirm({
+      payments,
+      customerName,
+      cashReceived: cashPaymentAmount > 0 ? cashReceivedNum : 0,
+      changeAmount: cashPaymentAmount > 0 && cashReceivedNum >= cashPaymentAmount ? cashChange : 0,
+    })
+  }
+
+  // Quick cash amounts based on total
+  const quickCashAmounts = (() => {
+    if (total <= 0) return []
+    const rounded = Math.ceil(total / 100) * 100
+    const amounts = new Set<number>()
+    amounts.add(rounded)
+    if (rounded - 50 >= total) amounts.add(rounded - 50)
+    amounts.add(rounded + 100)
+    amounts.add(rounded + 200)
+    // Add exact amount
+    amounts.add(Math.ceil(total))
+    return Array.from(amounts).sort((a, b) => a - b).slice(0, 5)
+  })()
+
   return (
     <>
       <DialogHeader>
@@ -177,10 +214,16 @@ function PaymentDialogContent({
             <span className="text-slate-500">Items</span>
             <span className="font-medium">{cart.length} productos</span>
           </div>
-          <div className="flex justify-between text-sm mb-2">
+          <div className="flex justify-between text-sm mb-1">
             <span className="text-slate-500">Subtotal</span>
             <span className="font-medium">{formatCurrency(subtotal)}</span>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-slate-500">Descuento</span>
+              <span className="font-medium text-red-600">-{formatCurrency(discount)}</span>
+            </div>
+          )}
           <Separator className="my-2" />
           <div className="flex justify-between items-baseline">
             <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -258,7 +301,7 @@ function PaymentDialogContent({
                     autoFocus={index === 0}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && canConfirm) {
-                        onConfirm(payments, customerName)
+                        handleConfirm()
                       }
                     }}
                   />
@@ -290,7 +333,7 @@ function PaymentDialogContent({
         </div>
 
         {/* Cash received (only when there's an EFECTIVO payment) */}
-        {cashPaymentIndex >= 0 && (
+        {cashPaymentAmount > 0 && (
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
               Efectivo recibido
@@ -307,14 +350,32 @@ function PaymentDialogContent({
                 onChange={(e) => setCashReceived(e.target.value)}
                 placeholder="0.00"
                 className="pl-7 h-12 text-lg font-semibold"
+                autoFocus={payments.length === 1 && payments[0].method === 'EFECTIVO' && payments[0].amount > 0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && canConfirm) {
-                    onConfirm(payments, customerName)
+                    handleConfirm()
                   }
                 }}
               />
             </div>
-            {cashReceived && cashReceivedNum >= payments[cashPaymentIndex]?.amount && payments[cashPaymentIndex]?.amount > 0 && (
+            {/* Quick cash buttons */}
+            {quickCashAmounts.length > 0 && (
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {quickCashAmounts.map((amount) => (
+                  <Button
+                    key={amount}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCashReceived(String(amount))}
+                    className="h-7 text-xs font-medium"
+                  >
+                    {formatCurrency(amount)}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {cashReceived && cashReceivedNum >= cashPaymentAmount && cashPaymentAmount > 0 && (
               <div className="mt-2 flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
                 <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                   Vuelto
@@ -350,7 +411,7 @@ function PaymentDialogContent({
             <div className="mt-2 space-y-0.5">
               {payments.map((p, i) => (
                 <div key={i} className="flex justify-between text-xs text-slate-500">
-                  <span>{PAYMENT_METHOD_LABELS[normalizePaymentMethod(p.method)]}</span>
+                  <span>{(PAYMENT_METHOD_LABELS as Record<string, string>)[normalizePaymentMethod(p.method)] || p.method}</span>
                   <span>{formatCurrency(p.amount)}</span>
                 </div>
               ))}
@@ -382,7 +443,7 @@ function PaymentDialogContent({
           Cancelar
         </Button>
         <Button
-          onClick={() => onConfirm(payments, customerName)}
+          onClick={handleConfirm}
           disabled={!canConfirm || isProcessing}
           className="bg-slate-800 hover:bg-slate-700 shadow-sm text-white min-w-[140px]"
         >
