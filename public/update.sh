@@ -25,7 +25,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Version
-TARGET_VERSION="0.6.0"
+TARGET_VERSION="0.7.0"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"

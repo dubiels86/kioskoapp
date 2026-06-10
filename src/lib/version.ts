@@ -4,12 +4,20 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.6.0'
+export const APP_VERSION = '0.7.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
+  '0.7.0': [
+    'Pagos mixtos: reportes por método de pago correctos',
+    'Dinero entregado por el cliente y cálculo de vuelto',
+    'Botones de montos rápidos en efectivo',
+    'Descuento visible en diálogo de cobro',
+    'Recibo muestra efectivo recibido y vuelto',
+    'Listado de ventas muestra desglose por método de pago',
+  ],
   '0.6.0': [
     'Reportes por rango de fechas',
     'Tab de Gastos en reportes',
