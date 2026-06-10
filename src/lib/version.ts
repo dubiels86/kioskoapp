@@ -4,12 +4,21 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.7.0'
+export const APP_VERSION = '0.8.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
+  '0.8.0': [
+    'Pagos divididos: múltiples medios de pago por venta',
+    'Efectivo recibido y cálculo de vuelto automático',
+    'Botones rápidos de montos de efectivo',
+    'Reportes con desglose correcto por medio de pago (incluyendo MIXTO)',
+    'Medios de pago personalizables desde configuración',
+    'Recibo muestra efectivo recibido y vuelto',
+    'Mejoras en diálogo de cobro (descuento visible, resumen de pagos)',
+  ],
   '0.7.0': [
     'Pagos mixtos: reportes por método de pago correctos',
     'Dinero entregado por el cliente y cálculo de vuelto',

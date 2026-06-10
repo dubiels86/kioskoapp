@@ -15,7 +15,7 @@
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
-const APP_VERSION = '0.6.0'
+const APP_VERSION = '0.8.0'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
 const SUPER_ADMIN_PASSWORD = 'openpgpwd'
@@ -324,6 +324,11 @@ async function updateSystem() {
     console.log('   • Historial de cambios de tipo de cambio')
     console.log('   • Conversión en tiempo real al visualizar precios')
     console.log('   • Moneda principal configurable')
+    console.log('   • Pagos divididos (múltiples medios de pago por venta)')
+    console.log('   • Efectivo recibido y cálculo de vuelto')
+    console.log('   • Reportes con desglose por medio de pago (incluyendo MIXTO)')
+    console.log('   • Botones rápidos de efectivo en cobro')
+    console.log('   • Medios de pago personalizables')
 
   } catch (error) {
     console.error('')

@@ -109,3 +109,29 @@ Stage Summary:
 - PaymentDialog shows discount in summary and has quick cash amount buttons
 - Receipt shows vuelto information
 - Server OOM in sandbox prevents full browser testing, but code compiles and APIs work via curl
+
+---
+Task ID: 1
+Agent: Main
+Task: Regenerate update files with latest split payment + cash received changes
+
+Work Log:
+- Verified current code has all latest changes (split payments, cash received/change, reports fix)
+- Bumped version from 0.7.0 to 0.8.0 in package.json, src/lib/version.ts, scripts/update-system.ts, public/update.sh
+- Added 0.8.0 changelog entry in version.ts documenting all new features
+- Updated update-system.ts APP_VERSION from 0.6.0 to 0.8.0 and added new feature descriptions
+- Updated update.sh TARGET_VERSION to 0.8.0 and added new feature descriptions
+- Ran `bun run build-update` to regenerate update.tar.gz (168KB) and kiosko-app.tar.gz (62MB)
+- Verified update.tar.gz contains: cashReceived/changeAmount in schema, version 0.8.0, payment-dialog.tsx with split payments
+- Verified download API endpoints work (update.sh download confirmed with TARGET_VERSION=0.8.0)
+- Lint passes cleanly
+- Note: update.tar.gz download via API causes OOM in sandbox (server memory limits), but files on disk are correct
+
+Stage Summary:
+- Version bumped to 0.8.0 across all files
+- Update packages rebuilt with latest code including:
+  - Pagos divididos (múltiples medios de pago por venta)
+  - Efectivo recibido y cálculo de vuelto automático
+  - Reportes con desglose correcto por medio de pago (incluyendo MIXTO)
+  - Medios de pago personalizables
+- Files: public/update.tar.gz (168KB), public/kiosko-app.tar.gz (62MB), public/update.sh (11.5KB)

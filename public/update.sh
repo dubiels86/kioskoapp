@@ -25,12 +25,12 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Version
-TARGET_VERSION="0.7.0"
+TARGET_VERSION="0.8.0"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║   KioskoApp - Actualización Completa     ║${NC}"
-echo -e "${CYAN}║   Versión destino: v${TARGET_VERSION}               ║${NC}"
+echo -e "${CYAN}║   Versión destino: v${TARGET_VERSION}               "`# padding`"${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -317,6 +317,10 @@ echo -e "  ${CYAN}•${NC} Reportes diarios"
 echo -e "  ${CYAN}•${NC} Opciones personalizables (unidades, categorías de gasto)"
 echo -e "  ${CYAN}•${NC} Sistema de actualización automática"
 echo -e "  ${CYAN}•${NC} Verificación de versión"
+echo -e "  ${CYAN}•${NC} Pagos divididos (múltiples medios de pago)"
+echo -e "  ${CYAN}•${NC} Efectivo recibido y cálculo de vuelto"
+echo -e "  ${CYAN}•${NC} Reportes con desglose por medio de pago"
+echo -e "  ${CYAN}•${NC} Medios de pago personalizables"
 echo ""
 echo -e "${BOLD}🔑 Credenciales:${NC}"
 echo -e "  ${CYAN}Super Admin:${NC} dubiel / openpgpwd"
