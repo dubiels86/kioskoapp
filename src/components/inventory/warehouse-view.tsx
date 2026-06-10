@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import {
   Table,
   TableBody,
@@ -15,13 +16,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -113,6 +107,26 @@ function WarehouseFormDialog({
   const [type, setType] = useState<WarehouseType>('PRINCIPAL')
   const [address, setAddress] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error')
+      return res.json() as Record<string, { key: string; value: string; label: string }[]>
+    },
+  })
+
+  const customWarehouseTypes: string[] = settings?.custom_options?.find(s => s.key === 'custom_warehouse_types')?.value
+    ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_warehouse_types')!.value)
+    : []
+
+  const ALL_WAREHOUSE_TYPES = [
+    ...WAREHOUSE_TYPES,
+    ...customWarehouseTypes
+      .filter(t => !WAREHOUSE_TYPES.some(wt => wt.value === t))
+      .map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() })),
+  ]
 
   // Reset form when dialog opens
   const handleOpenChange = (newOpen: boolean) => {
@@ -218,18 +232,25 @@ function WarehouseFormDialog({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="wh-type">Tipo</Label>
-              <Select value={type} onValueChange={(v) => setType(v as WarehouseType)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {WAREHOUSE_TYPES.map((wt) => (
-                    <SelectItem key={wt.value} value={wt.value}>
-                      {wt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CreatableSelect
+                options={ALL_WAREHOUSE_TYPES.map((wt) => ({ value: wt.value, label: wt.label }))}
+                value={type}
+                onValueChange={(v) => setType(v as WarehouseType)}
+                onCreate={async (name) => {
+                  const currentCustom = customWarehouseTypes
+                  const updated = [...currentCustom, name.toUpperCase()]
+                  await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ custom_warehouse_types: JSON.stringify(updated) }),
+                  })
+                  queryClient.invalidateQueries({ queryKey: ['settings'] })
+                  return name.toUpperCase()
+                }}
+                placeholder="Seleccionar tipo..."
+                searchPlaceholder="Buscar tipo..."
+                createLabel="Crear '{0}'"
+              />
             </div>
           </div>
 

@@ -14,13 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { CreatableSelect } from '@/components/ui/creatable-select'
 import {
   Table,
@@ -284,18 +277,25 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
               <Warehouse className="h-4 w-4" />
               Depósito de Recepción
             </Label>
-            <Select value={warehouseId} onValueChange={setSelectedWarehouseId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleccionar depósito..." />
-              </SelectTrigger>
-              <SelectContent>
-                {warehouses.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+              value={warehouseId}
+              onValueChange={setSelectedWarehouseId}
+              onCreate={async (name) => {
+                const res = await fetch('/api/warehouses', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+                })
+                if (!res.ok) throw new Error('Error al crear depósito')
+                const warehouse = await res.json()
+                queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+                return warehouse.id
+              }}
+              placeholder="Seleccionar depósito..."
+              searchPlaceholder="Buscar depósito..."
+              createLabel="Crear '{0}'"
+            />
             {selectedWarehouse && (
               <p className="text-sm text-muted-foreground">
                 Los productos se recibirán en: <span className="font-medium text-foreground">{selectedWarehouse.name}</span>

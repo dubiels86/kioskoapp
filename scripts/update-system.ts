@@ -61,6 +61,10 @@ const NEW_SETTINGS = [
   { key: 'custom_units', value: '[]', label: 'Unidades Personalizadas', group: 'custom_options' },
   { key: 'custom_expense_categories', value: '[]', label: 'Categorías de Gasto Personalizadas', group: 'custom_options' },
   { key: 'custom_expense_payment_methods', value: '[]', label: 'Métodos de Pago de Gastos Personalizados', group: 'custom_options' },
+  { key: 'custom_payment_methods', value: '[]', label: 'Métodos de Pago Personalizados (POS)', group: 'custom_options' },
+  { key: 'custom_repair_brands', value: '[]', label: 'Marcas de Reparación Personalizadas', group: 'custom_options' },
+  { key: 'custom_repair_devices', value: '[]', label: 'Dispositivos de Reparación Personalizados', group: 'custom_options' },
+  { key: 'custom_warehouse_types', value: '[]', label: 'Tipos de Depósito Personalizados', group: 'custom_options' },
 ]
 
 async function updateSystem() {

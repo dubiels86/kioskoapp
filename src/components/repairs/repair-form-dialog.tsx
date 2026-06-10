@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
 import { Plus, Trash2, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/format'
@@ -62,6 +63,37 @@ const emptyPart: RepairPart = {
 export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialogProps) {
   const isEditing = !!repair
   const queryClient = useQueryClient()
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error')
+      return res.json() as Record<string, { key: string; value: string; label: string }[]>
+    },
+  })
+
+  const { data: repairs = [] } = useQuery({
+    queryKey: ['repairs'],
+    queryFn: async () => {
+      const res = await fetch('/api/repairs')
+      if (!res.ok) throw new Error('Error')
+      return res.json() as Array<{ brand: string | null; device: string }>
+    },
+  })
+
+  const customBrands: string[] = settings?.custom_options?.find(s => s.key === 'custom_repair_brands')?.value
+    ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_repair_brands')!.value)
+    : []
+  const customDevices: string[] = settings?.custom_options?.find(s => s.key === 'custom_repair_devices')?.value
+    ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_repair_devices')!.value)
+    : []
+
+  const existingBrands = [...new Set(repairs.map((r: { brand: string | null }) => r.brand).filter(Boolean) as string[])]
+  const existingDevices = [...new Set(repairs.map((r: { device: string }) => r.device).filter(Boolean) as string[])]
+
+  const ALL_BRANDS = [...new Set([...existingBrands, ...customBrands])].sort()
+  const ALL_DEVICES = [...new Set([...existingDevices, ...customDevices])].sort()
 
   const [customerName, setCustomerName] = useState(repair?.customerName || '')
   const [customerPhone, setCustomerPhone] = useState(repair?.customerPhone || '')
@@ -245,21 +277,42 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="device">Dispositivo *</Label>
-                <Input
-                  id="device"
-                  placeholder="Ej: Celular, Notebook, Tablet..."
+                <CreatableSelect
+                  options={ALL_DEVICES.map((d: string) => ({ value: d, label: d }))}
                   value={device}
-                  onChange={(e) => setDevice(e.target.value)}
-                  required
+                  onValueChange={setDevice}
+                  onCreate={async (name) => {
+                    const updated = [...customDevices, name]
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ custom_repair_devices: JSON.stringify(updated) }),
+                    })
+                    return name
+                  }}
+                  placeholder="Ej: Celular, Notebook, Tablet..."
+                  searchPlaceholder="Buscar dispositivo..."
+                  createLabel="Crear '{0}'"
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="brand">Marca</Label>
-                <Input
-                  id="brand"
-                  placeholder="Ej: Samsung, Apple..."
+                <CreatableSelect
+                  options={ALL_BRANDS.map((b: string) => ({ value: b, label: b }))}
                   value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
+                  onValueChange={setBrand}
+                  onCreate={async (name) => {
+                    const updated = [...customBrands, name]
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ custom_repair_brands: JSON.stringify(updated) }),
+                    })
+                    return name
+                  }}
+                  placeholder="Ej: Samsung, Apple..."
+                  searchPlaceholder="Buscar marca..."
+                  createLabel="Crear '{0}'"
                 />
               </div>
               <div className="space-y-2">

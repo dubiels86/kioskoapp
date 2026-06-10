@@ -61,27 +61,33 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { name, code, type, address } = body
 
-    if (!name || !code) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Nombre y código son requeridos' },
+        { error: 'El nombre es requerido' },
         { status: 400 }
       )
     }
 
-    // Check code uniqueness
-    const existing = await db.warehouse.findUnique({ where: { code } })
+    // Auto-generate code from name if not provided
+    const warehouseCode = code || name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'WH'
+
+    // Check code uniqueness, auto-increment if duplicate
+    let finalCode = warehouseCode
+    const existing = await db.warehouse.findUnique({ where: { code: finalCode } })
     if (existing) {
-      return NextResponse.json(
-        { error: 'Ya existe un depósito con ese código' },
-        { status: 400 }
-      )
+      // Append number to make unique
+      let counter = 1
+      while (await db.warehouse.findUnique({ where: { code: `${finalCode}${counter}` } })) {
+        counter++
+      }
+      finalCode = `${finalCode}${counter}`
     }
 
     const warehouse = await db.warehouse.create({
       data: {
         name,
-        code,
-        type: type || 'PRINCIPAL',
+        code: finalCode,
+        type: type || 'SECUNDARIO',
         address: address || null,
       },
     })

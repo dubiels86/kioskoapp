@@ -15,13 +15,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { CreatableSelect } from '@/components/ui/creatable-select'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Banknote,
   CreditCard,
@@ -88,6 +83,24 @@ function PaymentDialogContent({
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: 'EFECTIVO', amount: 0 }])
   const [cashReceived, setCashReceived] = useState<string>('')
   const [customerName, setCustomerName] = useState('')
+
+  const queryClient = useQueryClient()
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: async () => {
+      const res = await fetch('/api/settings')
+      if (!res.ok) throw new Error('Error')
+      return res.json() as Record<string, { key: string; value: string; label: string }[]>
+    },
+  })
+  const customPaymentMethods: string[] = settings?.custom_options?.find(s => s.key === 'custom_payment_methods')?.value
+    ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_payment_methods')!.value)
+    : []
+
+  const ALL_PAYMENT_METHODS = [
+    ...PAYMENT_METHODS_LIST,
+    ...customPaymentMethods.filter(m => !PAYMENT_METHODS_LIST.includes(m as PaymentMethod)) as PaymentMethod[],
+  ]
 
   const isCafeteria = posType === 'cafeteria'
   const subtotal = cartSubtotal()
@@ -207,21 +220,29 @@ function PaymentDialogContent({
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0 text-slate-600 dark:text-slate-400" />
-                <Select
+                <CreatableSelect
+                  options={ALL_PAYMENT_METHODS.map((m) => ({
+                    value: m,
+                    label: (PAYMENT_METHOD_LABELS as Record<string, string>)[m] || m,
+                  }))}
                   value={payment.method}
                   onValueChange={(v) => handlePaymentMethodChange(index, v)}
-                >
-                  <SelectTrigger className="w-[130px] h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS_LIST.map((m) => (
-                      <SelectItem key={m} value={m}>
-                        {PAYMENT_METHOD_LABELS[m]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onCreate={async (name) => {
+                    const currentCustom = customPaymentMethods
+                    const updated = [...currentCustom, name.toUpperCase()]
+                    await fetch('/api/settings', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ custom_payment_methods: JSON.stringify(updated) }),
+                    })
+                    queryClient.invalidateQueries({ queryKey: ['settings'] })
+                    return name.toUpperCase()
+                  }}
+                  placeholder="Medio"
+                  searchPlaceholder="Buscar..."
+                  createLabel="Crear '{0}'"
+                  className="w-[150px] h-8 text-xs"
+                />
                 <div className="relative flex-1">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">
                     $

@@ -22,3 +22,27 @@ Stage Summary:
 - 3 ways to update: (1) shell script update.sh, (2) bun run update-system, (3) API POST /api/update
 - Version info visible in Settings > General > System Info
 - Update package builder: bun run build-update
+
+---
+Task ID: 2
+Agent: main
+Task: Convert all select/dropdown fields to CreatableSelect for on-the-fly option creation
+
+Work Log:
+- Explored all form components with select/dropdown fields (15 instances across 10+ files)
+- Identified 6 fields already using CreatableSelect (product category, product unit, supplier, expense category, expense payment method, user role)
+- Converted warehouse selects in purchase-form-dialog.tsx, stock-transfer-dialog.tsx, stock-receiving-dialog.tsx to CreatableSelect
+- Converted POS payment method select in payment-dialog.tsx to CreatableSelect with custom payment methods stored in settings
+- Converted repair brand and device inputs in repair-form-dialog.tsx to CreatableSelect with suggestions from existing repairs + custom settings
+- Converted warehouse type select in warehouse-view.tsx to CreatableSelect with custom types
+- Updated warehouses API to support creation with just name (auto-generates code, defaults to SECUNDARIO type)
+- Added 4 new settings: custom_payment_methods, custom_repair_brands, custom_repair_devices, custom_warehouse_types
+- Updated update-system.ts script with new settings
+- All lint checks pass
+- All API endpoints tested and working
+
+Stage Summary:
+- 9 additional select fields converted to CreatableSelect (total: 15 creatable + 6 remaining fixed selects)
+- Fixed selects that remain: currency locale, decimals, repair status, cash movement type, purchase status filter, movement type filter (these are fixed enums/filters)
+- Warehouse API now supports minimal creation (name only) for on-the-fly creation
+- 4 new custom_options settings added for storing user-created options

@@ -13,14 +13,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { PackagePlus, Search } from 'lucide-react'
+import { CreatableSelect } from '@/components/ui/creatable-select'
+import { PackagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Warehouse {
@@ -63,7 +57,6 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState('Recepción de stock')
-  const [productSearch, setProductSearch] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Fetch warehouses
@@ -96,22 +89,10 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     }
   }, [warehouses, toWarehouseId])
 
-  // Filter products based on search
+  // Filter products
   const filteredProducts = useMemo(() => {
-    let result = products
-
-    if (productSearch) {
-      const s = productSearch.toLowerCase()
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(s) ||
-          (p.barcode && p.barcode.toLowerCase().includes(s)) ||
-          (p.sku && p.sku.toLowerCase().includes(s))
-      )
-    }
-
-    return result
-  }, [products, productSearch])
+    return products
+  }, [products])
 
   // Get current stock in destination warehouse
   const destinationStock = useMemo(() => {
@@ -134,7 +115,6 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     setProductId('')
     setQuantity('')
     setReason('Recepción de stock')
-    setProductSearch('')
   }
 
   const handleSubmit = async () => {
@@ -199,51 +179,52 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
           {/* Destination warehouse */}
           <div className="grid gap-2">
             <Label>Depósito de Destino *</Label>
-            <Select value={toWarehouseId} onValueChange={(v) => { setToWarehouseId(v); setProductId('') }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar depósito destino" />
-              </SelectTrigger>
-              <SelectContent>
-                {warehouses.filter((w) => w.isActive).map((wh) => (
-                  <SelectItem key={wh.id} value={wh.id}>
-                    {wh.name} ({wh.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              options={warehouses.filter((w) => w.isActive).map((wh) => ({ value: wh.id, label: `${wh.name} (${wh.code})` }))}
+              value={toWarehouseId}
+              onValueChange={(v) => { setToWarehouseId(v); setProductId('') }}
+              onCreate={async (name) => {
+                const res = await fetch('/api/warehouses', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name }),
+                })
+                if (!res.ok) throw new Error('Error al crear depósito')
+                const warehouse = await res.json()
+                queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+                return warehouse.id
+              }}
+              placeholder="Seleccionar depósito destino"
+              searchPlaceholder="Buscar depósito..."
+              createLabel="Crear '{0}'"
+            />
           </div>
 
-          {/* Product search + select */}
+          {/* Product select */}
           <div className="grid gap-2">
             <Label>Producto *</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nombre, código de barras o SKU..."
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  filteredProducts.length === 0
-                    ? 'Sin productos encontrados'
-                    : 'Seleccionar producto'
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredProducts.map((p) => {
-                  const stockInDest = p.stocks.find((s) => s.warehouseId === toWarehouseId)?.stock ?? 0
-                  return (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}{toWarehouseId ? ` (Stock actual: ${stockInDest})` : ''}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+            <CreatableSelect
+              options={filteredProducts.map((p) => {
+                const stockInDest = p.stocks.find((s) => s.warehouseId === toWarehouseId)?.stock ?? 0
+                return { value: p.id, label: `${p.name}${toWarehouseId ? ` (Stock: ${stockInDest})` : ''}` }
+              })}
+              value={productId}
+              onValueChange={setProductId}
+              onCreate={async (name) => {
+                const res = await fetch('/api/products', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name, costPrice: 0, salePrice: 0, unit: 'unidad' }),
+                })
+                if (!res.ok) throw new Error('Error al crear producto')
+                const product = await res.json()
+                queryClient.invalidateQueries({ queryKey: ['products'] })
+                return product.id
+              }}
+              placeholder={filteredProducts.length === 0 ? 'Sin productos' : 'Seleccionar producto...'}
+              searchPlaceholder="Buscar producto..."
+              createLabel="Crear '{0}'"
+            />
           </div>
 
           {/* Current stock info */}
