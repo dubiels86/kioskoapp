@@ -56,6 +56,7 @@ export async function PUT(
       totalCost,
       status,
       notes,
+      parts,
     } = body
 
     const existing = await db.repair.findUnique({ where: { id } })
@@ -94,6 +95,23 @@ export async function PUT(
         if (!existing.completedAt) {
           updateData.completedAt = new Date()
         }
+      }
+    }
+
+    // Handle parts update: delete existing and recreate if parts array is provided
+    if (parts !== undefined) {
+      await db.repairPart.deleteMany({ where: { repairId: id } })
+      if (Array.isArray(parts) && parts.length > 0) {
+        await db.repairPart.createMany({
+          data: parts.map((part: { productId?: string; partName: string; quantity?: number; costPrice?: number; salePrice?: number }) => ({
+            repairId: id,
+            productId: part.productId || null,
+            partName: part.partName,
+            quantity: part.quantity || 1,
+            costPrice: part.costPrice ? parseFloat(part.costPrice) : 0,
+            salePrice: part.salePrice ? parseFloat(part.salePrice) : 0,
+          })),
+        })
       }
     }
 

@@ -25,7 +25,7 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Version
-TARGET_VERSION="0.8.0"
+TARGET_VERSION="0.9.0"
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
@@ -321,6 +321,11 @@ echo -e "  ${CYAN}•${NC} Pagos divididos (múltiples medios de pago)"
 echo -e "  ${CYAN}•${NC} Efectivo recibido y cálculo de vuelto"
 echo -e "  ${CYAN}•${NC} Reportes con desglose por medio de pago"
 echo -e "  ${CYAN}•${NC} Medios de pago personalizables"
+echo -e "  ${CYAN}•${NC} Producto: opción Mostrar en Punto de Venta"
+echo -e "  ${CYAN}•${NC} Reparaciones: seleccionar piezas desde inventario"
+echo -e "  ${CYAN}•${NC} Recepción de stock: precio de costo con ponderación"
+echo -e "  ${CYAN}•${NC} Compras: cálculo automático de costo ponderado al recibir"
+echo -e "  ${CYAN}•${NC} Recepción: opción Mostrar en POS al crear producto"
 echo ""
 echo -e "${BOLD}🔑 Credenciales:${NC}"
 echo -e "  ${CYAN}Super Admin:${NC} dubiel / openpgpwd"

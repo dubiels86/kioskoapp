@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { productId, warehouseId, quantity, reason } = body
+    const { productId, warehouseId, quantity, reason, costPrice } = body
 
     // Validate required fields
     if (!productId || !warehouseId || !quantity) {
@@ -75,7 +75,40 @@ export async function POST(request: Request) {
         data: { stock: { increment: qty } },
       })
 
-      // c. Create InventoryMovement with type ENTRADA
+      // c. Calculate weighted average cost price
+      if (costPrice !== undefined && costPrice !== null) {
+        const newCostPrice = parseFloat(String(costPrice))
+        if (!isNaN(newCostPrice) && newCostPrice >= 0) {
+          const previousStock = updatedProduct.stock - qty
+          if (previousStock > 0) {
+            // Weighted average: (existingStock * existingCost + newQty * newCost) / totalStock
+            const weightedAvg = (previousStock * product.costPrice + qty * newCostPrice) / updatedProduct.stock
+            await tx.product.update({
+              where: { id: productId },
+              data: { costPrice: Math.round(weightedAvg * 100) / 100 },
+            })
+          } else {
+            // No previous stock, just use the new cost price
+            await tx.product.update({
+              where: { id: productId },
+              data: { costPrice: newCostPrice },
+            })
+          }
+        }
+      }
+
+      // d. Create InventoryMovement with type ENTRADA
+      const movementReason = (() => {
+        const base = reason || 'Recepción de stock'
+        if (costPrice !== undefined && costPrice !== null) {
+          const newCostPrice = parseFloat(String(costPrice))
+          if (!isNaN(newCostPrice) && newCostPrice >= 0) {
+            return `${base} - Costo: $${newCostPrice}`
+          }
+        }
+        return base
+      })()
+
       const movement = await tx.inventoryMovement.create({
         data: {
           productId,
@@ -84,7 +117,7 @@ export async function POST(request: Request) {
           previousStock: updatedProduct.stock - qty,
           newStock: updatedProduct.stock,
           toWarehouseId: warehouseId,
-          reason: reason || null,
+          reason: movementReason,
         },
         include: {
           product: true,

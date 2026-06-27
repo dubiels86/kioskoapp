@@ -63,6 +63,7 @@ export async function PUT(
       unit,
       isActive,
       image,
+      showInPos,
     } = body
 
     const existingProduct = await db.product.findUnique({ where: { id } })
@@ -126,6 +127,7 @@ export async function PUT(
       if (unit !== undefined) updateData.unit = unit
       if (isActive !== undefined) updateData.isActive = isActive
       if (image !== undefined) updateData.image = image || null
+      if (showInPos !== undefined) updateData.showInPos = showInPos
 
       const updated = await tx.product.update({
         where: { id },

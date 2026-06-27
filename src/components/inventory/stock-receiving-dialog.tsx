@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CreatableSelect } from '@/components/ui/creatable-select'
+import { Switch } from '@/components/ui/switch'
 import { PackagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -42,6 +43,7 @@ interface Product {
   barcode?: string | null
   sku?: string | null
   stock: number
+  costPrice: number
   stocks: ProductStock[]
 }
 
@@ -56,7 +58,9 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
   const [toWarehouseId, setToWarehouseId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [costPrice, setCostPrice] = useState('')
   const [reason, setReason] = useState('Recepción de stock')
+  const [showInPos, setShowInPos] = useState(true)
   const [saving, setSaving] = useState(false)
 
   // Fetch warehouses
@@ -106,6 +110,15 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     return products.find((p) => p.id === productId)
   }, [productId, products])
 
+  // Auto-fill costPrice when product is selected
+  useEffect(() => {
+    if (selectedProduct) {
+      setCostPrice(selectedProduct.costPrice > 0 ? String(selectedProduct.costPrice) : '')
+    } else {
+      setCostPrice('')
+    }
+  }, [selectedProduct])
+
   const toWarehouse = useMemo(() => {
     return warehouses.find((w) => w.id === toWarehouseId)
   }, [toWarehouseId, warehouses])
@@ -114,7 +127,9 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     setToWarehouseId('')
     setProductId('')
     setQuantity('')
+    setCostPrice('')
     setReason('Recepción de stock')
+    setShowInPos(true)
   }
 
   const handleSubmit = async () => {
@@ -130,6 +145,10 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
       toast.error('Ingresa una cantidad válida')
       return
     }
+    if (!costPrice || parseFloat(costPrice) < 0) {
+      toast.error('Ingresa un precio de costo válido')
+      return
+    }
 
     setSaving(true)
     try {
@@ -140,6 +159,7 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
           productId,
           warehouseId: toWarehouseId,
           quantity: parseInt(quantity),
+          costPrice: parseFloat(costPrice),
           reason: reason.trim() || 'Recepción de stock',
         }),
       })
@@ -214,7 +234,13 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
                 const res = await fetch('/api/products', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ name, costPrice: 0, salePrice: 0, unit: 'unidad' }),
+                  body: JSON.stringify({ 
+                    name, 
+                    costPrice: parseFloat(costPrice) || 0, 
+                    salePrice: parseFloat(costPrice) || 0, 
+                    unit: 'unidad',
+                    showInPos 
+                  }),
                 })
                 if (!res.ok) throw new Error('Error al crear producto')
                 const product = await res.json()
@@ -258,6 +284,69 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
               placeholder="0"
             />
           </div>
+
+          {/* Cost Price */}
+          <div className="grid gap-2">
+            <Label htmlFor="receive-costPrice">Precio de Costo *</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+              <Input
+                id="receive-costPrice"
+                type="number"
+                step="0.01"
+                min="0"
+                value={costPrice}
+                onChange={(e) => setCostPrice(e.target.value)}
+                placeholder="0.00"
+                className="pl-7"
+              />
+            </div>
+          </div>
+
+          {/* Show in POS toggle */}
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">Mostrar en Punto de Venta</Label>
+              <p className="text-xs text-muted-foreground">
+                Los productos sin esta opción solo se usan en reparaciones o internamente
+              </p>
+            </div>
+            <Switch
+              checked={showInPos}
+              onCheckedChange={setShowInPos}
+            />
+          </div>
+
+          {/* Weighted average preview */}
+          {selectedProduct && destinationStock !== null && destinationStock > 0 && costPrice && parseFloat(costPrice) > 0 && selectedProduct.costPrice !== parseFloat(costPrice) && (() => {
+            const currentStock = destinationStock
+            const currentCost = selectedProduct.costPrice
+            const newQty = parseInt(quantity) || 0
+            const newCost = parseFloat(costPrice)
+            const totalStock = currentStock + newQty
+            const weightedAvg = totalStock > 0 ? (currentStock * currentCost + newQty * newCost) / totalStock : 0
+            return (
+              <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 p-3 space-y-1">
+                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">📊 Promedio Ponderado</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <span className="text-muted-foreground">Stock actual:</span>
+                  <span className="font-medium">{currentStock} uds</span>
+                  <span className="text-muted-foreground">Costo actual:</span>
+                  <span className="font-medium">${currentCost.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Nueva cantidad:</span>
+                  <span className="font-medium">{newQty} uds</span>
+                  <span className="text-muted-foreground">Nuevo costo:</span>
+                  <span className="font-medium">${newCost.toFixed(2)}</span>
+                </div>
+                <div className="pt-1 border-t border-emerald-200 dark:border-emerald-800 mt-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-emerald-700 dark:text-emerald-400">Costo promedio resultante:</span>
+                    <span className="font-bold text-emerald-700 dark:text-emerald-400">${weightedAvg.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Reason */}
           <div className="grid gap-2">

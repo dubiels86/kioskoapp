@@ -181,6 +181,24 @@ export async function POST(request: Request) {
             referenceId: newPurchase.id,
           },
         })
+
+        // Calculate weighted average cost price
+        const newCostPrice = parseFloat(item.costPrice)
+        if (!isNaN(newCostPrice) && newCostPrice >= 0) {
+          const previousStock = product.stock // product.stock is the stock BEFORE increment
+          if (previousStock > 0) {
+            const weightedAvg = (previousStock * product.costPrice + item.quantity * newCostPrice) / updatedProduct.stock
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { costPrice: Math.round(weightedAvg * 100) / 100 },
+            })
+          } else {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { costPrice: newCostPrice },
+            })
+          }
+        }
       }
 
       return newPurchase

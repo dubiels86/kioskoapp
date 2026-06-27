@@ -4,12 +4,21 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.8.0'
+export const APP_VERSION = '0.9.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
+  '0.9.0': [
+    'Producto: opción "Mostrar en Punto de Venta" (ocultar productos internos del POS)',
+    'Reparaciones: seleccionar piezas desde inventario con autocompletado de precios',
+    'Recepción de stock: campo precio de costo con cálculo de precio ponderado',
+    'Compras: cálculo automático de precio de costo ponderado al recibir',
+    'Inventario: columna POS indica si el producto se muestra en ventas',
+    'Recepción: opción "Mostrar en POS" al crear producto desde recepción',
+    'Reparaciones: agregar/editar repuestos también al editar una reparación',
+  ],
   '0.8.0': [
     'Pagos divididos: múltiples medios de pago por venta',
     'Efectivo recibido y cálculo de vuelto automático',

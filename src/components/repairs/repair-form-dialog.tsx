@@ -82,6 +82,22 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
     },
   })
 
+  const { data: inventoryProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const res = await fetch('/api/products?active=true')
+      if (!res.ok) throw new Error('Error al obtener productos')
+      return res.json() as Promise<Array<{
+        id: string
+        name: string
+        costPrice: number
+        salePrice: number
+        stock: number
+        barcode?: string | null
+      }>>
+    },
+  })
+
   const customBrands: string[] = settings?.custom_options?.find(s => s.key === 'custom_repair_brands')?.value
     ? JSON.parse(settings.custom_options.find(s => s.key === 'custom_repair_brands')!.value)
     : []
@@ -122,6 +138,67 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
     const updated = [...parts]
     updated[idx] = { ...updated[idx], [field]: value }
     setParts(updated)
+  }
+
+  const handlePartProductSelect = (idx: number, productId: string) => {
+    const product = inventoryProducts.find(p => p.id === productId)
+    if (product) {
+      const updated = [...parts]
+      updated[idx] = {
+        ...updated[idx],
+        partName: product.name,
+        productId: product.id,
+        costPrice: product.costPrice,
+        salePrice: product.salePrice,
+      }
+      setParts(updated)
+    }
+  }
+
+  const handleCreatePartProduct = async (idx: number, name: string): Promise<string> => {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          costPrice: 0,
+          salePrice: 0,
+          unit: 'unidad',
+          showInPos: false, // Products created from repairs are not for POS by default
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Error al crear producto')
+      }
+      const newProduct = await res.json()
+      // Refresh the products list so the new product appears
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      // Link the new product to the repair part
+      const updated = [...parts]
+      updated[idx] = {
+        ...updated[idx],
+        partName: newProduct.name,
+        productId: newProduct.id,
+        costPrice: newProduct.costPrice,
+        salePrice: newProduct.salePrice,
+      }
+      setParts(updated)
+      toast.success(`Producto "${name}" creado en inventario`)
+      return newProduct.id
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al crear producto')
+      // Fallback: set as custom text without DB link
+      const updated = [...parts]
+      updated[idx] = {
+        ...updated[idx],
+        partName: name,
+        productId: undefined,
+      }
+      setParts(updated)
+      return `custom-${idx}`
+    }
   }
 
   const partsCostTotal = parts.reduce((sum, p) => sum + p.costPrice * p.quantity, 0)
@@ -205,6 +282,14 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
       totalCost,
     }
 
+    data.parts = parts.filter((p) => p.partName.trim()).map((p) => ({
+      partName: p.partName.trim(),
+      productId: p.productId || undefined,
+      quantity: p.quantity,
+      costPrice: p.costPrice,
+      salePrice: p.salePrice,
+    }))
+
     if (isEditing) {
       data.diagnosis = diagnosis.trim() || undefined
       data.notes = notes.trim() || undefined
@@ -212,13 +297,6 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
       updateMutation.mutate(data)
     } else {
       data.notes = notes.trim() || undefined
-      data.parts = parts.filter((p) => p.partName.trim()).map((p) => ({
-        partName: p.partName.trim(),
-        productId: p.productId || undefined,
-        quantity: p.quantity,
-        costPrice: p.costPrice,
-        salePrice: p.salePrice,
-      }))
       createMutation.mutate(data)
     }
   }
@@ -449,129 +527,117 @@ export function RepairFormDialog({ open, onOpenChange, repair }: RepairFormDialo
           )}
 
           {/* Parts */}
-          {!isEditing && (
-            <>
-              <Separator />
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Repuestos
-                  </h4>
-                  <Button type="button" size="sm" variant="outline" onClick={addPart} className="gap-1">
-                    <Plus className="w-4 h-4" />
-                    Agregar Pieza
-                  </Button>
-                </div>
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                  Repuestos
+                </h4>
+                <Button type="button" size="sm" variant="outline" onClick={addPart} className="gap-1">
+                  <Plus className="w-4 h-4" />
+                  Agregar Pieza
+                </Button>
+              </div>
 
-                {parts.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    No hay repuestos agregados. Haga clic en &quot;Agregar Pieza&quot; si es necesario.
-                  </p>
-                )}
+              {parts.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  No hay repuestos agregados. Haga clic en &quot;Agregar Pieza&quot; si es necesario.
+                </p>
+              )}
 
-                {parts.map((part, idx) => (
-                  <div key={idx} className="rounded-lg border p-4 space-y-3 bg-muted/30">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Pieza #{idx + 1}</span>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => removePart(idx)}
-                        className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+              {parts.map((part, idx) => (
+                <div key={idx} className="rounded-lg border p-4 space-y-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Pieza #{idx + 1}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => removePart(idx)}
+                      className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label className="text-xs">Producto / Pieza *</Label>
+                      <CreatableSelect
+                        options={inventoryProducts.map(p => ({
+                          value: p.id,
+                          label: `${p.name}${p.barcode ? ` (${p.barcode})` : ''} — Stock: ${p.stock}`,
+                        }))}
+                        value={part.productId || ''}
+                        onValueChange={(v) => handlePartProductSelect(idx, v)}
+                        onCreate={async (name) => {
+                          return await handleCreatePartProduct(idx, name)
+                        }}
+                        placeholder="Buscar en inventario o crear nuevo..."
+                        searchPlaceholder="Buscar producto..."
+                        createLabel="Crear producto '{0}'"
+                      />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Nombre de la Pieza *</Label>
-                        <Input
-                          placeholder="Ej: Pantalla, Batería..."
-                          value={part.partName}
-                          onChange={(e) => updatePart(idx, 'partName', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Cantidad</Label>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cantidad</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={part.quantity}
+                        onChange={(e) => updatePart(idx, 'quantity', parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Precio de Costo</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
                         <Input
                           type="number"
-                          min="1"
-                          value={part.quantity}
-                          onChange={(e) => updatePart(idx, 'quantity', parseInt(e.target.value) || 1)}
+                          step="0.01"
+                          min="0"
+                          value={part.costPrice}
+                          onChange={(e) => updatePart(idx, 'costPrice', parseFloat(e.target.value) || 0)}
+                          className="pl-7"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Precio de Costo</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={part.costPrice}
-                            onChange={(e) => updatePart(idx, 'costPrice', parseFloat(e.target.value) || 0)}
-                            className="pl-7"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Precio de Venta</Label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={part.salePrice}
-                            onChange={(e) => updatePart(idx, 'salePrice', parseFloat(e.target.value) || 0)}
-                            className="pl-7"
-                          />
-                        </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Precio de Venta</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={part.salePrice}
+                          onChange={(e) => updatePart(idx, 'salePrice', parseFloat(e.target.value) || 0)}
+                          className="pl-7"
+                        />
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
 
-                {parts.length > 0 && (
-                  <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span>Costo de Repuestos:</span>
-                      <span>{formatCurrency(partsCostTotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Mano de Obra:</span>
-                      <span>{formatCurrency(parseFloat(repairCost || '0'))}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between font-bold">
-                      <span>Total:</span>
-                      <span>{formatCurrency(totalCost)}</span>
-                    </div>
+              {parts.length > 0 && (
+                <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Costo de Repuestos:</span>
+                    <span>{formatCurrency(partsCostTotal)}</span>
                   </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Total (editing) */}
-          {isEditing && (
-            <div className="rounded-lg bg-muted/50 p-3 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Costo de Repuestos:</span>
-                <span>{formatCurrency(partsCostTotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Mano de Obra:</span>
-                <span>{formatCurrency(parseFloat(repairCost || '0'))}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold">
-                <span>Total:</span>
-                <span>{formatCurrency(totalCost)}</span>
-              </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Mano de Obra:</span>
+                    <span>{formatCurrency(parseFloat(repairCost || '0'))}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-bold">
+                    <span>Total:</span>
+                    <span>{formatCurrency(totalCost)}</span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

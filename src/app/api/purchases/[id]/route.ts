@@ -149,6 +149,24 @@ export async function PUT(
                 referenceId: existing.id,
               },
             })
+
+            // Calculate weighted average cost price
+            const purchaseItemCostPrice = item.costPrice
+            if (purchaseItemCostPrice !== undefined && purchaseItemCostPrice > 0) {
+              const previousStock = product.stock // stock before increment
+              if (previousStock > 0) {
+                const weightedAvg = (previousStock * product.costPrice + item.quantity * purchaseItemCostPrice) / updatedProduct.stock
+                await tx.product.update({
+                  where: { id: item.productId },
+                  data: { costPrice: Math.round(weightedAvg * 100) / 100 },
+                })
+              } else {
+                await tx.product.update({
+                  where: { id: item.productId },
+                  data: { costPrice: purchaseItemCostPrice },
+                })
+              }
+            }
           }
         }
 

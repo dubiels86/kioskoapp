@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { CreatableSelect } from '@/components/ui/creatable-select'
 import { ImagePlus, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,6 +35,7 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  showInPos: boolean
   image?: string | null
 }
 
@@ -83,6 +85,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const [minStock, setMinStock] = useState('')
   const [unit, setUnit] = useState('unidad')
   const [image, setImage] = useState<string | null>(null)
+  const [showInPos, setShowInPos] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -97,6 +100,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setMinStock(String(product.minStock))
       setUnit(product.unit)
       setImage(product.image || null)
+      setShowInPos(product.showInPos !== undefined ? product.showInPos : true)
     } else {
       setName('')
       setBarcode('')
@@ -108,6 +112,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setMinStock('5')
       setUnit('unidad')
       setImage(null)
+      setShowInPos(true)
     }
   }, [product, open])
 
@@ -170,6 +175,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
         minStock: minStock ? parseInt(minStock) : undefined,
         unit,
         image: image || undefined,
+        showInPos,
       }
 
       if (isEditing) {
@@ -410,6 +416,19 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
               placeholder="Seleccionar unidad..."
               searchPlaceholder="Buscar unidad..."
               createLabel="Crear '{0}'"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-sm font-medium">Mostrar en Punto de Venta</Label>
+              <p className="text-xs text-muted-foreground">
+                Los productos sin esta opción solo se usan en reparaciones o internamente
+              </p>
+            </div>
+            <Switch
+              checked={showInPos}
+              onCheckedChange={setShowInPos}
             />
           </div>
         </div>

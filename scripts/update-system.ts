@@ -15,7 +15,7 @@
 import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
-const APP_VERSION = '0.8.0'
+const APP_VERSION = '0.9.0'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
 const SUPER_ADMIN_PASSWORD = 'openpgpwd'
@@ -329,6 +329,11 @@ async function updateSystem() {
     console.log('   • Reportes con desglose por medio de pago (incluyendo MIXTO)')
     console.log('   • Botones rápidos de efectivo en cobro')
     console.log('   • Medios de pago personalizables')
+    console.log('   • Producto: opción Mostrar en Punto de Venta')
+    console.log('   • Reparaciones: seleccionar piezas desde inventario')
+    console.log('   • Recepción de stock: precio de costo con ponderación')
+    console.log('   • Compras: cálculo automático de precio de costo ponderado al recibir')
+    console.log('   • Recepción: opción Mostrar en POS al crear producto')
 
   } catch (error) {
     console.error('')

@@ -32,6 +32,7 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  showInPos: boolean
   image?: string | null
   warehouseStock?: number
   warehouseMinStock?: number
@@ -88,6 +89,7 @@ export function ProductGrid({ warehouseId }: ProductGridProps) {
         params.set('categoryId', posCategoryFilter)
       }
       params.set('active', 'true')
+      params.set('showInPos', 'true')
       if (warehouseId) {
         params.set('warehouseId', warehouseId)
       }

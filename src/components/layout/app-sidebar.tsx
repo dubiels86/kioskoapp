@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { Store, ShoppingCart, Package, Truck, Banknote, Wrench, BarChart3, Settings, Download, Receipt, LogOut, User } from 'lucide-react'
 import { useAppStore } from '@/lib/store'
 import type { AppView, RolePermission } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { CurrencySelector } from '@/components/layout/currency-selector'
+import { DownloadDialog } from '@/components/settings/download-dialog'
 
 interface NavItem {
   view: AppView
@@ -30,6 +32,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { activeView, setActiveView, currentCashRegisterId, user, hasPermission, logout } = useAppStore()
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false)
 
   const handleNavClick = (view: AppView) => {
     setActiveView(view)
@@ -106,14 +109,15 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         <div className="mx-0 h-px bg-slate-700/60 mb-2" />
 
         {/* Download link */}
-        <a
-          href="/kiosko-app.tar.gz"
-          download="kiosko-app.tar.gz"
+        <button
+          onClick={() => setDownloadDialogOpen(true)}
           className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 transition-all duration-150"
         >
           <Download className="w-4 h-4" />
-          Descargar Proyecto
-        </a>
+          Descargas
+        </button>
+
+        <DownloadDialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen} />
 
         {/* Cash Register Status */}
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-800/60">

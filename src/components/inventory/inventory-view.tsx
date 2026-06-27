@@ -93,6 +93,7 @@ interface Product {
   minStock: number
   unit: string
   isActive: boolean
+  showInPos: boolean
   image?: string | null
   stocks?: ProductStock[]
 }
@@ -376,19 +377,20 @@ export function InventoryView() {
                     </div>
                   </TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="text-center">POS</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {productsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                       Cargando productos...
                     </TableCell>
                   </TableRow>
                 ) : paginatedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
                       No se encontraron productos
                     </TableCell>
                   </TableRow>
@@ -476,6 +478,9 @@ export function InventoryView() {
                             </Badge>
                           )}
                         </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`inline-flex h-3 w-3 rounded-full ${product.showInPos ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Button
@@ -508,7 +513,7 @@ export function InventoryView() {
                       {/* Expanded stock breakdown */}
                       {expandedStock === product.id && product.stocks && product.stocks.length > 1 && (
                         <TableRow key={`${product.id}-stock`}>
-                          <TableCell colSpan={9} className="bg-slate-50 dark:bg-slate-900/30 p-0">
+                          <TableCell colSpan={10} className="bg-slate-50 dark:bg-slate-900/30 p-0">
                             <div className="p-3 px-6">
                               <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                 Stock por depósito
