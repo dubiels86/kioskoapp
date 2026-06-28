@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stat, createReadStream } from 'fs'
+import { readFile, stat } from 'fs/promises'
 import { join } from 'path'
 import { APP_VERSION } from '@/lib/version'
-import { Readable } from 'stream'
 
 export async function GET(request: NextRequest) {
   try {
-    // ?type=update → download update.tar.gz (small, ~170KB)
+    // ?type=update → download update.tar.gz (small, ~150KB)
     // ?type=full (default) → download kiosko-app.tar.gz (big, ~60MB)
     const type = request.nextUrl.searchParams.get('type') || 'full'
 
@@ -22,35 +21,27 @@ export async function GET(request: NextRequest) {
     }
 
     const filePath = join(process.cwd(), 'public', fileName)
-
-    // Check file exists and get size
-    const fileStat = await new Promise<{ size: number; isFile: boolean } | null>((resolve) => {
-      stat(filePath, (err, stats) => {
-        if (err || !stats?.isFile()) {
-          resolve(null)
-        } else {
-          resolve({ size: stats.size, isFile: true })
-        }
-      })
-    })
-
-    if (!fileStat) {
-      return NextResponse.json(
-        { error: 'Archivo no encontrado. Ejecutá "bun run build-update" para generar los paquetes.' },
-        { status: 404 }
-      )
+    
+    let fileStat
+    try {
+      fileStat = await stat(filePath)
+      if (!fileStat.isFile()) {
+        return NextResponse.json({ error: 'Archivo no encontrado' }, { status: 404 })
+      }
+    } catch {
+      return NextResponse.json({ 
+        error: 'Archivo no encontrado. Ejecutá "bun run build-update" para generar los paquetes.' 
+      }, { status: 404 })
     }
 
-    // Stream the file to avoid OOM on large files
-    const nodeStream = createReadStream(filePath)
-    const webStream = Readable.toWeb(nodeStream) as ReadableStream
+    const fileBuffer = await readFile(filePath)
 
-    return new NextResponse(webStream, {
+    return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/gzip',
         'Content-Disposition': `attachment; filename="${downloadName}"`,
-        'Content-Length': fileStat.size.toString(),
+        'Content-Length': fileBuffer.length.toString(),
         'Cache-Control': 'public, max-age=3600',
         'X-App-Version': APP_VERSION,
       },

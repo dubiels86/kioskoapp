@@ -13,7 +13,7 @@ import { db } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
 const SUPER_ADMIN_USERNAME = 'dubiel'
-const SUPER_ADMIN_PASSWORD = 'openpgpwd'
+const SUPER_ADMIN_PASSWORD = 'TuNuevaContraseña123'
 const SUPER_ADMIN_NAME = 'Dubiel'
 const SUPER_ADMIN_ROLE_NAME = 'Super Administrador'
 

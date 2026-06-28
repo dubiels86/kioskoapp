@@ -25,12 +25,16 @@ model Product {
   category    Category?      @relation(fields: [categoryId], references: [id])
   costPrice   Float    // Precio de costo
   salePrice   Float    // Precio de venta
+  costCurrency String  @default("CUP") // Moneda del precio de costo (CUP o USD)
+  saleCurrency String  @default("CUP") // Moneda del precio de venta (CUP o USD)
+  costExchangeRate Float? // Tipo de cambio USD/CUP usado cuando se actualizó el precio de costo
+  saleExchangeRate Float? // Tipo de cambio USD/CUP usado cuando se actualizó el precio de venta
   image       String?  // Base64 data URL for product image
   stock       Int      @default(0)
   minStock    Int      @default(5)
   unit        String   @default("unidad")
+  isPosProduct Boolean  @default(false)
   isActive    Boolean  @default(true)
-  showInPos   Boolean  @default(true) // Si se muestra en el punto de venta
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   movements   InventoryMovement[]
@@ -84,6 +88,10 @@ model InventoryMovement {
   toWarehouse     Warehouse? @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
   reason          String?
   referenceId     String?
+  costPrice       Float?     // Precio de costo en la moneda especificada
+  costCurrency    String     @default("CUP") // Moneda del precio de costo (CUP o USD)
+  exchangeRate    Float      @default(1) // Tipo de cambio USD/CUP usado para esta transacción
+  referenceExchangeRate Float? // Tipo de cambio de referencia del mercado en ese momento
   createdAt       DateTime   @default(now())
 }
 
@@ -103,6 +111,8 @@ model Purchase {
   supplierId    String?
   supplier      Supplier? @relation(fields: [supplierId], references: [id])
   invoiceNumber String?
+  currencyCode  String   @default("ARS") // Moneda de la compra
+  exchangeRate  Float    @default(1) // Tipo de cambio respecto a moneda base
   totalAmount   Float
   status        String   @default("PENDIENTE")
   notes         String?
@@ -121,6 +131,8 @@ model PurchaseItem {
   warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
   quantity    Int
   costPrice   Float
+  costCurrency String   @default("ARS") // Moneda del costo en este item
+  exchangeRate  Float   @default(1) // Tipo de cambio usado para este item
   subtotal    Float
 }
 
@@ -134,8 +146,6 @@ model Sale {
   discount        Float         @default(0)
   total           Float
   costTotal       Float         // Total al precio de costo
-  cashReceived    Float?        // Efectivo entregado por el cliente
-  changeAmount    Float?        // Vuelto entregado al cliente
   tableNumber     Int?          // Número de mesa (solo para modo cafetería)
   customerName    String?
   notes           String?
@@ -198,26 +208,33 @@ model CashMovement {
 }
 
 model Repair {
-  id            String       @id @default(cuid())
-  customerName  String
-  customerPhone String?
-  device        String
-  brand         String?
-  model         String?
-  serialNumber  String?
-  issue         String
-  diagnosis     String?
-  repairCost    Float        @default(0)
-  partsCost     Float        @default(0)
-  totalCost     Float        @default(0)
-  status        String       @default("RECIBIDO")
-  receivedAt    DateTime     @default(now())
-  completedAt   DateTime?
-  deliveredAt   DateTime?
-  notes         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  parts         RepairPart[]
+  id              String       @id @default(cuid())
+  ticketNumber    String       @unique
+  customerName    String
+  customerPhone   String?
+  customerEmail   String?
+  device          String
+  brand           String?
+  model           String?
+  serialNumber    String?
+  condition       String?      // Condición al ingreso: daños previos, accesorios entregados
+  issue           String
+  diagnosis       String?
+  priority        String       @default("NORMAL") // URGENTE, NORMAL, BAJA
+  repairCost      Float        @default(0)
+  partsCost       Float        @default(0)
+  totalCost       Float        @default(0)
+  deposit         Float        @default(0) // Seña / adelanto del cliente
+  status          String       @default("RECIBIDO")
+  estimatedDate   DateTime?    // Fecha estimada de entrega
+  receivedAt      DateTime     @default(now())
+  completedAt     DateTime?
+  deliveredAt     DateTime?
+  notes           String?
+  internalNotes   String?      // Notas internas (no visibles al cliente)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  parts           RepairPart[]
 }
 
 model RepairPart {
@@ -276,26 +293,24 @@ model Expense {
 
 model Currency {
   id          String   @id @default(cuid())
-  code        String   @unique   // ISO 4217 code: ARS, USD, EUR, etc.
-  name        String             // Argentine Peso, US Dollar, etc.
-  symbol      String             // $, US$, €, etc.
-  locale      String   @default("es-AR") // For Intl.NumberFormat
-  isBase      Boolean  @default(false)   // Is this the base (primary) currency?
-  exchangeRate Float   @default(1)       // Rate relative to base currency (1 base = X of this currency)
+  code        String   @unique
+  name        String
+  symbol      String
+  locale      String   @default("es-AR")
+  isBase      Boolean  @default(false)
+  exchangeRate Float   @default(1)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
 model ExchangeRateHistory {
-  id           String   @id @default(cuid())
-  fromCurrency String             // ISO code
-  toCurrency   String             // ISO code
-  rate         Float              // 1 fromCurrency = X toCurrency
-  source       String  @default("manual") // manual, api
+  id          String   @id @default(cuid())
+  fromCurrency String
+  toCurrency   String
+  rate         Float
+  source       String  @default("manual") // manual, api, calculated
   createdAt    DateTime @default(now())
-
-  @@index([fromCurrency, toCurrency, createdAt])
 }
 
 model Setting {

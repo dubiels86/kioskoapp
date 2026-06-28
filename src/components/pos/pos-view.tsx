@@ -7,7 +7,7 @@ import { ProductGrid } from '@/components/pos/product-grid'
 import { CartPanel } from '@/components/pos/cart-panel'
 import { CashOpenDialog } from '@/components/pos/cash-open-dialog'
 import { CashCloseDialog } from '@/components/pos/cash-close-dialog'
-import { PaymentDialog } from '@/components/pos/payment-dialog'
+import { SimplePaymentDialog } from '@/components/pos/simple-payment-dialog'
 import { ReceiptDialog } from '@/components/pos/receipt-dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -21,7 +21,6 @@ import {
 import { useState, useEffect, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { WarehouseType, PaymentEntry } from '@/lib/types'
-import type { PaymentResult } from '@/components/pos/payment-dialog'
 import type { PosType } from '@/lib/store'
 
 interface CashRegisterData {
@@ -49,8 +48,6 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
-  cashReceived?: number | null
-  changeAmount?: number | null
   tableNumber: number | null
   customerName?: string | null
   items: SaleItemData[]
@@ -196,13 +193,13 @@ export function POSView() {
   }, [cashRegister, setCurrentCashRegisterId])
 
   // Process sale with payments
-  const handleProcessSale = (result: PaymentResult) => {
-    processSaleMutation.mutate(result)
+  const handleProcessSale = (payments: PaymentEntry[], customerName: string) => {
+    processSaleMutation.mutate({ payments, customerName })
   }
 
   // Process sale mutation
   const processSaleMutation = useMutation({
-    mutationFn: async ({ payments, customerName, cashReceived, changeAmount }: PaymentResult) => {
+    mutationFn: async ({ payments, customerName }: { payments: PaymentEntry[]; customerName: string }) => {
       if (!currentCashRegisterId) {
         throw new Error('No hay una caja abierta')
       }
@@ -236,8 +233,6 @@ export function POSView() {
           warehouseId: selectedWarehouseId,
           customerName: customerName || undefined,
           tableNumber: isCafeteria ? selectedTable : undefined,
-          cashReceived: cashReceived || undefined,
-          changeAmount: changeAmount || undefined,
           payments: payments.map((p) => ({ method: p.method, amount: p.amount })),
           items: cart.map((item) => ({
             productId: item.productId,
@@ -456,12 +451,11 @@ export function POSView() {
         onOpenChange={setCashCloseDialogOpen}
         cashRegisterData={cashRegister}
       />
-      <PaymentDialog
+      <SimplePaymentDialog
         open={paymentDialogOpen}
         onOpenChange={setPaymentDialogOpen}
         onConfirm={handleProcessSale}
         isProcessing={processSaleMutation.isPending}
-        discount={discount}
       />
       <ReceiptDialog
         open={receiptDialogOpen}

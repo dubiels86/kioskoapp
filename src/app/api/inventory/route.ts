@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { productId, warehouseId, quantity, reason, costPrice } = body
+    const { productId, warehouseId, quantity, reason, costPrice, costCurrency = 'CUP', exchangeRate = 1 } = body
 
     // Validate required fields
     if (!productId || !warehouseId || !quantity) {
@@ -13,6 +13,38 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Validate costPrice if provided
+    const hasCostPrice = costPrice !== undefined && costPrice !== null
+    const costPriceNum = hasCostPrice ? parseFloat(String(costPrice)) : null
+    if (hasCostPrice && (isNaN(costPriceNum!) || costPriceNum! < 0)) {
+      return NextResponse.json(
+        { error: 'El precio de costo debe ser un número positivo' },
+        { status: 400 }
+      )
+    }
+    
+    // Validate currency
+    const validCurrencies = ['CUP', 'USD']
+    if (!validCurrencies.includes(costCurrency)) {
+      return NextResponse.json(
+        { error: 'Moneda no válida. Use CUP o USD' },
+        { status: 400 }
+      )
+    }
+    
+    // Validate exchange rate
+    const exchangeRateNum = parseFloat(String(exchangeRate))
+    if (isNaN(exchangeRateNum) || exchangeRateNum <= 0) {
+      return NextResponse.json(
+        { error: 'El tipo de cambio debe ser un número positivo' },
+        { status: 400 }
+      )
+    }
+    
+    // Get current USD exchange rate from database for historical reference
+    const usdCurrency = await db.currency.findUnique({ where: { code: 'USD' } })
+    const currentExchangeRate = usdCurrency?.exchangeRate || 240
 
     const qty = parseInt(String(quantity))
     if (isNaN(qty) || qty <= 0) {
@@ -54,6 +86,20 @@ export async function POST(request: Request) {
 
     // Execute all operations in a transaction
     const result = await db.$transaction(async (tx) => {
+      // Update cost price and currency if provided
+      if (hasCostPrice && costPriceNum !== null) {
+        // Only update basic cost information
+        // costExchangeRate is optional and can be updated separately if needed
+        await tx.product.update({
+          where: { id: productId },
+          data: { 
+            costPrice: costPriceNum,
+            costCurrency: costCurrency,
+            // Not updating costExchangeRate to avoid schema conflicts
+          },
+        })
+      }
+
       // a. Upsert ProductStock for product+warehouse combination
       const productStock = await tx.productStock.upsert({
         where: {
@@ -75,40 +121,7 @@ export async function POST(request: Request) {
         data: { stock: { increment: qty } },
       })
 
-      // c. Calculate weighted average cost price
-      if (costPrice !== undefined && costPrice !== null) {
-        const newCostPrice = parseFloat(String(costPrice))
-        if (!isNaN(newCostPrice) && newCostPrice >= 0) {
-          const previousStock = updatedProduct.stock - qty
-          if (previousStock > 0) {
-            // Weighted average: (existingStock * existingCost + newQty * newCost) / totalStock
-            const weightedAvg = (previousStock * product.costPrice + qty * newCostPrice) / updatedProduct.stock
-            await tx.product.update({
-              where: { id: productId },
-              data: { costPrice: Math.round(weightedAvg * 100) / 100 },
-            })
-          } else {
-            // No previous stock, just use the new cost price
-            await tx.product.update({
-              where: { id: productId },
-              data: { costPrice: newCostPrice },
-            })
-          }
-        }
-      }
-
-      // d. Create InventoryMovement with type ENTRADA
-      const movementReason = (() => {
-        const base = reason || 'Recepción de stock'
-        if (costPrice !== undefined && costPrice !== null) {
-          const newCostPrice = parseFloat(String(costPrice))
-          if (!isNaN(newCostPrice) && newCostPrice >= 0) {
-            return `${base} - Costo: $${newCostPrice}`
-          }
-        }
-        return base
-      })()
-
+      // c. Create InventoryMovement with type ENTRADA
       const movement = await tx.inventoryMovement.create({
         data: {
           productId,
@@ -117,7 +130,11 @@ export async function POST(request: Request) {
           previousStock: updatedProduct.stock - qty,
           newStock: updatedProduct.stock,
           toWarehouseId: warehouseId,
-          reason: movementReason,
+          reason: reason || null,
+          costPrice: costPriceNum,
+          costCurrency: costCurrency,
+          exchangeRate: costCurrency === 'CUP' ? exchangeRateNum : 1,
+          referenceExchangeRate: currentExchangeRate, // Store the current market rate for historical reference
         },
         include: {
           product: true,

@@ -7,8 +7,8 @@ export async function GET(request: Request) {
     const search = searchParams.get('search') || ''
     const categoryId = searchParams.get('categoryId') || ''
     const active = searchParams.get('active')
-    const showInPos = searchParams.get('showInPos')
     const warehouseId = searchParams.get('warehouseId') || ''
+    const forPos = searchParams.get('forPos') // Nuevo parámetro para filtrar productos del POS
 
     const where: Record<string, unknown> = {}
 
@@ -28,8 +28,9 @@ export async function GET(request: Request) {
       where.isActive = active === 'true'
     }
 
-    if (showInPos !== null) {
-      where.showInPos = showInPos === 'true'
+    // Filter for POS products if requested
+    if (forPos === 'true') {
+      where.isPosProduct = true
     }
 
     // If warehouseId is specified, filter products that have stock in that warehouse
@@ -95,11 +96,13 @@ export async function POST(request: Request) {
       categoryId,
       costPrice,
       salePrice,
+      costCurrency,
+      saleCurrency,
       stock,
       minStock,
       unit,
       image,
-      showInPos,
+      isPosProduct,
     } = body
 
     if (!name || costPrice === undefined || costPrice === null || salePrice === undefined || salePrice === null) {
@@ -142,11 +145,13 @@ export async function POST(request: Request) {
           categoryId: categoryId || null,
           costPrice: parseFloat(costPrice),
           salePrice: parseFloat(salePrice),
+          costCurrency: costCurrency || 'ARS',
+          saleCurrency: saleCurrency || 'ARS',
           image: image || null,
           stock: initialStock,
           minStock: minStock ?? 5,
           unit: unit || 'unidad',
-          showInPos: showInPos !== undefined ? showInPos : true,
+          isPosProduct: isPosProduct || false,
         },
         include: {
           category: true,

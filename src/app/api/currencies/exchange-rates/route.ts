@@ -5,23 +5,67 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const url = request.nextUrl
-    const from = url.searchParams.get('from')
-    const to = url.searchParams.get('to')
+    const from = url.searchParams.get('from') || 'USD'
+    const to = url.searchParams.get('to') || 'CUP'
     const limit = parseInt(url.searchParams.get('limit') || '50')
 
-    const where: { fromCurrency?: string; toCurrency?: string } = {}
-    if (from) where.fromCurrency = from
-    if (to) where.toCurrency = to
-
-    const history = await db.exchangeRateHistory.findMany({
-      where,
+    const exchangeRates = await db.exchangeRateHistory.findMany({
+      where: {
+        fromCurrency: from,
+        toCurrency: to,
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
     })
 
-    return NextResponse.json(history)
+    return NextResponse.json(exchangeRates)
   } catch (error) {
-    console.error('Error fetching exchange rates:', error)
-    return NextResponse.json({ error: 'Error al obtener historial de tipos de cambio' }, { status: 500 })
+    console.error('Error fetching exchange rate history:', error)
+    return NextResponse.json(
+      { error: 'Error al obtener historial de tipos de cambio' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/currencies/exchange-rates - Create new exchange rate record
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json()
+
+    // Validate required fields
+    const { fromCurrency, toCurrency, rate, source } = data
+
+    if (!fromCurrency || !toCurrency || !rate) {
+      return NextResponse.json(
+        { error: 'Faltan campos obligatorios: fromCurrency, toCurrency, rate' },
+        { status: 400 }
+      )
+    }
+
+    if (typeof rate !== 'number' || rate <= 0) {
+      return NextResponse.json(
+        { error: 'El tipo de cambio debe ser un número positivo' },
+        { status: 400 }
+      )
+    }
+
+    // Create new exchange rate record
+    const newRate = await db.exchangeRateHistory.create({
+      data: {
+        fromCurrency,
+        toCurrency,
+        rate,
+        source: source || 'manual',
+      },
+    })
+
+    return NextResponse.json(newRate, { status: 201 })
+  } catch (error) {
+    console.error('Error creating exchange rate:', error)
+    return NextResponse.json(
+      { error: 'Error al crear tipo de cambio' },
+      { status: 500 }
+    )
   }
 }

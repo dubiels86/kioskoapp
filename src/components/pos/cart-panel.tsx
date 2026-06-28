@@ -18,7 +18,6 @@ import {
   ShoppingCart,
   Banknote,
   ArrowRightLeft,
-  Home,
   AlertCircle,
   Coffee,
 } from 'lucide-react'
@@ -52,13 +51,6 @@ const PAYMENT_METHODS: {
     color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-amber-300 dark:hover:border-amber-600',
     activeColor: 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 text-amber-700 dark:text-amber-400 shadow-sm shadow-amber-500/10',
   },
-  {
-    value: 'CUENTA_CASA',
-    label: PAYMENT_METHOD_LABELS.CUENTA_CASA,
-    icon: Home,
-    color: 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-violet-300 dark:hover:border-violet-600',
-    activeColor: 'border-violet-500 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/40 dark:to-purple-950/40 text-violet-700 dark:text-violet-400 shadow-sm shadow-violet-500/10',
-  },
 ]
 
 export function CartPanel({
@@ -73,7 +65,6 @@ export function CartPanel({
     updateCartItemQuantity,
     clearCart,
     cartSubtotal,
-    cartCostTotal,
     selectedPaymentMethod,
     setSelectedPaymentMethod,
     currentCashRegisterId,
@@ -84,9 +75,7 @@ export function CartPanel({
   const isCafeteria = posType === 'cafeteria'
 
   const subtotal = cartSubtotal()
-  const costTotal = cartCostTotal()
   const total = subtotal - discount
-  const isCuentaCasa = selectedPaymentMethod === 'CUENTA_CASA'
   const isCartEmpty = cart.length === 0
 
   // Check if any cart item has 0 stock in the selected warehouse
@@ -215,14 +204,6 @@ export function CartPanel({
             </span>
           </div>
 
-          {isCuentaCasa && (
-            <div className="flex justify-between items-baseline">
-              <span className="text-xs text-slate-500">Costo Total</span>
-              <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-                {formatCurrency(costTotal)}
-              </span>
-            </div>
-          )}
         </div>
       )}
 
@@ -231,7 +212,7 @@ export function CartPanel({
         <p className="text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
           Método de pago
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {PAYMENT_METHODS.map((method) => {
             const Icon = method.icon
             const isSelected = selectedPaymentMethod === method.value
@@ -252,17 +233,7 @@ export function CartPanel({
             )
           })}
         </div>
-        {isCuentaCasa && (
-          <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-tight">
-              Las ventas &quot;Cuenta Casa / Merma&quot; se registran en reportes
-              al precio de costo.
-            </p>
-          </div>
-        )}
-      </div>
-
+        </div>
       {/* Process Sale Button */}
       <div className="shrink-0 px-4 pb-4 pt-1">
         <Button

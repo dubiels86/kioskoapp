@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type { AppView } from '@/lib/types'
 import type { AuthUser } from '@/lib/store'
 import { Loader2 } from 'lucide-react'
+import { DebugInfo } from '@/components/debug/debug-info'
 
 const MODULE_COMPONENTS: Record<AppView, React.ComponentType> = {
   pos: POSView,
@@ -88,10 +89,11 @@ export default function Home() {
   const ActiveComponent = MODULE_COMPONENTS[activeView]
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 lg-indicator">
+      <DebugInfo />
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex shrink-0 sticky top-0 h-screen">
+        <aside className="hidden lg:flex shrink-0 sticky top-0 h-screen debug-sidebar">
           <AppSidebar />
         </aside>
 

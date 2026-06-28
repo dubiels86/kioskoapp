@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { CreatableSelect } from '@/components/ui/creatable-select'
 import { ImagePlus, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -31,11 +30,12 @@ interface Product {
   categoryId?: string | null
   costPrice: number
   salePrice: number
+  costCurrency: string
+  saleCurrency: string
   stock: number
   minStock: number
   unit: string
   isActive: boolean
-  showInPos: boolean
   image?: string | null
 }
 
@@ -81,11 +81,13 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const [categoryId, setCategoryId] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
+  const [costCurrency, setCostCurrency] = useState('ARS')
+  const [saleCurrency, setSaleCurrency] = useState('ARS')
   const [stock, setStock] = useState('')
   const [minStock, setMinStock] = useState('')
   const [unit, setUnit] = useState('unidad')
+  const [isPosProduct, setIsPosProduct] = useState(false)
   const [image, setImage] = useState<string | null>(null)
-  const [showInPos, setShowInPos] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -96,11 +98,13 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setCategoryId(product.categoryId || '')
       setCostPrice(String(product.costPrice))
       setSalePrice(String(product.salePrice))
+      setCostCurrency(product.costCurrency || 'ARS')
+      setSaleCurrency(product.saleCurrency || 'ARS')
       setStock(String(product.stock))
       setMinStock(String(product.minStock))
       setUnit(product.unit)
+      setIsPosProduct(product.isPosProduct || false)
       setImage(product.image || null)
-      setShowInPos(product.showInPos !== undefined ? product.showInPos : true)
     } else {
       setName('')
       setBarcode('')
@@ -108,11 +112,13 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setCategoryId('')
       setCostPrice('')
       setSalePrice('')
+      setCostCurrency('ARS')
+      setSaleCurrency('ARS')
       setStock('')
       setMinStock('5')
       setUnit('unidad')
+      setIsPosProduct(false)
       setImage(null)
-      setShowInPos(true)
     }
   }, [product, open])
 
@@ -171,11 +177,13 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
         categoryId: categoryId || undefined,
         costPrice: parseFloat(costPrice),
         salePrice: parseFloat(salePrice),
+        costCurrency,
+        saleCurrency,
         stock: stock ? parseInt(stock) : undefined,
         minStock: minStock ? parseInt(minStock) : undefined,
         unit,
+        isPosProduct,
         image: image || undefined,
-        showInPos,
       }
 
       if (isEditing) {
@@ -372,6 +380,29 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
+              <Label htmlFor="costCurrency">Moneda costo</Label>
+              <Input
+                id="costCurrency"
+                value={costCurrency}
+                onChange={(e) => setCostCurrency(e.target.value.toUpperCase())}
+                placeholder="ARS"
+                maxLength={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="saleCurrency">Moneda venta</Label>
+              <Input
+                id="saleCurrency"
+                value={saleCurrency}
+                onChange={(e) => setSaleCurrency(e.target.value.toUpperCase())}
+                placeholder="ARS"
+                maxLength={3}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
               <Label htmlFor="stock">Stock</Label>
               <Input
                 id="stock"
@@ -396,6 +427,21 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
           </div>
 
           <div className="grid gap-2">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isPosProduct"
+                checked={isPosProduct}
+                onChange={(e) => setIsPosProduct(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-600"
+              />
+              <Label htmlFor="isPosProduct" className="text-sm font-normal text-gray-700 cursor-pointer">
+                Producto para POS
+              </Label>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
             <Label htmlFor="unit">Unidad</Label>
             <CreatableSelect
               options={ALL_UNITS.map((u) => ({ value: u.value, label: u.label }))}
@@ -416,19 +462,6 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
               placeholder="Seleccionar unidad..."
               searchPlaceholder="Buscar unidad..."
               createLabel="Crear '{0}'"
-            />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Mostrar en Punto de Venta</Label>
-              <p className="text-xs text-muted-foreground">
-                Los productos sin esta opción solo se usan en reparaciones o internamente
-              </p>
-            </div>
-            <Switch
-              checked={showInPos}
-              onCheckedChange={setShowInPos}
             />
           </div>
         </div>

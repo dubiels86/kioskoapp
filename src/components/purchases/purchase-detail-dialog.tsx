@@ -31,7 +31,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Warehouse as WarehouseIcon } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, formatCurrencyWithCode } from '@/lib/format'
 import { PURCHASE_STATUS_LABELS } from '@/lib/types'
 import type { PurchaseStatus } from '@/lib/types'
 
@@ -54,6 +54,8 @@ interface PurchaseItem {
   productId: string
   quantity: number
   costPrice: number
+  costCurrency: string
+  exchangeRate: number
   subtotal: number
   product: {
     id: string
@@ -72,6 +74,8 @@ interface Purchase {
   supplierId?: string | null
   supplier?: { id: string; name: string } | null
   invoiceNumber?: string | null
+  currencyCode: string
+  exchangeRate: number
   totalAmount: number
   status: PurchaseStatus
   notes?: string | null
@@ -197,6 +201,17 @@ export function PurchaseDetailDialog({ open, onOpenChange, purchaseId }: Purchas
                 <p className="font-medium">{purchase.invoiceNumber || '—'}</p>
               </div>
               <div>
+                <p className="text-muted-foreground">Moneda</p>
+                <p className="font-medium">
+                  {purchase.currencyCode}
+                  {purchase.exchangeRate !== 1 && (
+                    <span className="text-xs text-muted-foreground ml-1">
+                      (TC: {purchase.exchangeRate.toFixed(4)})
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div>
                 <p className="text-muted-foreground">Fecha</p>
                 <p className="font-medium">{formatDate(purchase.createdAt)}</p>
               </div>
@@ -245,6 +260,8 @@ export function PurchaseDetailDialog({ open, onOpenChange, purchaseId }: Purchas
                     <TableHead>Producto</TableHead>
                     <TableHead className="text-right">Cantidad</TableHead>
                     <TableHead className="text-right">P. Costo</TableHead>
+                    <TableHead className="text-right">Moneda</TableHead>
+                    <TableHead className="text-right">Tipo Cambio</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -253,8 +270,10 @@ export function PurchaseDetailDialog({ open, onOpenChange, purchaseId }: Purchas
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.product.name}</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.costPrice)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.subtotal)}</TableCell>
+                      <TableCell className="text-right">{formatCurrencyWithCode(item.costPrice, item.costCurrency)}</TableCell>
+                      <TableCell className="text-right">{item.costCurrency}</TableCell>
+                      <TableCell className="text-right">{item.exchangeRate.toFixed(4)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrencyWithCode(item.subtotal, item.costCurrency)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

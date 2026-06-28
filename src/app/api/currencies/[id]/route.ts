@@ -1,85 +1,55 @@
 import { db } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
-// PUT /api/currencies/[id] - Update a currency
+// PUT /api/currencies/[id] - Update currency
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
-    const body = await request.json()
-    const { code, name, symbol, locale, isBase, exchangeRate, isActive } = body
+    const data = await request.json()
 
-    const existing = await db.currency.findUnique({ where: { id } })
-    if (!existing) {
-      return NextResponse.json({ error: 'Moneda no encontrada' }, { status: 404 })
-    }
+    // Validate that only allowed fields are being updated
+    const allowedFields = ['exchangeRate', 'isActive', 'symbol', 'name', 'locale']
+    const updates: any = {}
 
-    // If setting as base, unset any existing base
-    if (isBase && !existing.isBase) {
-      await db.currency.updateMany({
-        where: { isBase: true },
-        data: { isBase: false, exchangeRate: 1 },
-      })
-    }
-
-    const currency = await db.currency.update({
-      where: { id },
-      data: {
-        ...(code && { code: code.toUpperCase() }),
-        ...(name && { name }),
-        ...(symbol && { symbol }),
-        ...(locale && { locale }),
-        ...(isBase !== undefined && { isBase, exchangeRate: isBase ? 1 : (exchangeRate ?? existing.exchangeRate) }),
-        ...(exchangeRate !== undefined && !isBase && { exchangeRate }),
-        ...(isActive !== undefined && { isActive }),
-      },
-    })
-
-    // Record exchange rate change in history
-    if (exchangeRate !== undefined && exchangeRate !== existing.exchangeRate && !isBase) {
-      const baseCurrency = await db.currency.findFirst({ where: { isBase: true } })
-      if (baseCurrency) {
-        await db.exchangeRateHistory.create({
-          data: {
-            fromCurrency: baseCurrency.code,
-            toCurrency: currency.code,
-            rate: exchangeRate,
-            source: 'manual',
-          },
-        })
+    for (const key in data) {
+      if (allowedFields.includes(key)) {
+        updates[key] = data[key]
       }
     }
 
-    return NextResponse.json(currency)
+    // If trying to update exchange rate, validate it's a positive number
+    if (updates.exchangeRate !== undefined && (typeof updates.exchangeRate !== 'number' || updates.exchangeRate <= 0)) {
+      return NextResponse.json(
+        { error: 'El tipo de cambio debe ser un número positivo' },
+        { status: 400 }
+      )
+    }
+
+    // Update currency
+    const updatedCurrency = await db.currency.update({
+      where: {
+        id: params.id,
+      },
+      data: updates,
+    })
+
+    return NextResponse.json(updatedCurrency)
   } catch (error) {
     console.error('Error updating currency:', error)
-    return NextResponse.json({ error: 'Error al actualizar moneda' }, { status: 500 })
-  }
-}
-
-// DELETE /api/currencies/[id] - Delete a currency
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-
-    const existing = await db.currency.findUnique({ where: { id } })
-    if (!existing) {
-      return NextResponse.json({ error: 'Moneda no encontrada' }, { status: 404 })
+    
+    // Check if currency not found
+    if (error instanceof Error && error.message.includes('Record to update not found')) {
+      return NextResponse.json(
+        { error: 'Moneda no encontrada' },
+        { status: 404 }
+      )
     }
 
-    if (existing.isBase) {
-      return NextResponse.json({ error: 'No se puede eliminar la moneda principal' }, { status: 400 })
-    }
-
-    await db.currency.delete({ where: { id } })
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting currency:', error)
-    return NextResponse.json({ error: 'Error al eliminar moneda' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Error al actualizar moneda' },
+      { status: 500 }
+    )
   }
 }

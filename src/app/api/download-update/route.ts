@@ -1,38 +1,28 @@
 import { NextResponse } from 'next/server'
-import { stat, createReadStream } from 'fs'
+import { readFile, stat } from 'fs/promises'
 import { join } from 'path'
 import { APP_VERSION } from '@/lib/version'
-import { Readable } from 'stream'
 
 export async function GET() {
   try {
     const filePath = join(process.cwd(), 'public', 'update.sh')
-
-    // Check file exists and get size
-    const fileStat = await new Promise<{ size: number; isFile: boolean } | null>((resolve) => {
-      stat(filePath, (err, stats) => {
-        if (err || !stats?.isFile()) {
-          resolve(null)
-        } else {
-          resolve({ size: stats.size, isFile: true })
-        }
-      })
-    })
-
-    if (!fileStat) {
+    
+    try {
+      const fileStat = await stat(filePath)
+      if (!fileStat.isFile()) {
+        return NextResponse.json({ error: 'Archivo no encontrado' }, { status: 404 })
+      }
+    } catch {
       return NextResponse.json({ error: 'update.sh no encontrado' }, { status: 404 })
     }
 
-    // Stream the file
-    const nodeStream = createReadStream(filePath)
-    const webStream = Readable.toWeb(nodeStream) as ReadableStream
+    const fileBuffer = await readFile(filePath)
 
-    return new NextResponse(webStream, {
+    return new NextResponse(fileBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'text/x-shellscript',
         'Content-Disposition': `attachment; filename="update-v${APP_VERSION}.sh"`,
-        'Content-Length': fileStat.size.toString(),
         'Cache-Control': 'public, max-age=3600',
         'X-App-Version': APP_VERSION,
       },

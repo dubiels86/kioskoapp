@@ -43,6 +43,7 @@ export async function GET(request: Request) {
             },
           },
         },
+        payments: true,
         cashRegister: true,
       },
       orderBy: { createdAt: 'desc' },
@@ -71,8 +72,6 @@ export async function POST(request: Request) {
       warehouseId, // Global warehouse for all items
       payments, // Array of { method, amount }
       tableNumber, // Mesa number (cafeteria mode)
-      cashReceived, // Efectivo entregado por el cliente
-      changeAmount, // Vuelto entregado al cliente
     } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -105,8 +104,6 @@ export async function POST(request: Request) {
         )
       }
     }
-
-    // Validate payments sum >= total (we'll check after calculating total below)
 
     // Validate global warehouseId if provided
     if (warehouseId) {
@@ -170,10 +167,18 @@ export async function POST(request: Request) {
       let costTotal = 0
       const saleItemsData = []
 
+      // Determine if it's a CUENTA_CASA sale (all payments are CUENTA_CASA)
+      const allCuentaCasa = payments.every((p: { method: string }) => p.method === 'CUENTA_CASA')
+      
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         const product = productMap.get(item.productId)!
-        const itemSubtotal = item.quantity * product.salePrice
+        
+        // For CUENTA_CASA sales, use cost price instead of sale price
+        const itemSubtotal = allCuentaCasa ? 
+          item.quantity * product.costPrice : 
+          item.quantity * product.salePrice
+        
         const itemCostSubtotal = item.quantity * product.costPrice
         subtotal += itemSubtotal
         costTotal += itemCostSubtotal
@@ -183,7 +188,7 @@ export async function POST(request: Request) {
           warehouseId: itemWarehouses[i],
           quantity: item.quantity,
           costPrice: product.costPrice,
-          salePrice: product.salePrice,
+          salePrice: allCuentaCasa ? product.costPrice : product.salePrice, // Use cost price for CUENTA_CASA
           subtotal: itemSubtotal,
           costSubtotal: itemCostSubtotal,
         })
@@ -191,11 +196,10 @@ export async function POST(request: Request) {
 
       const discountAmount = discount ? parseFloat(discount) : 0
       const total = subtotal - discountAmount
-
-      // Validate that payments sum >= total
-      const paymentsSum = payments.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)
-      if (paymentsSum < total) {
-        throw new Error(`Los pagos ($${paymentsSum.toFixed(2)}) no cubren el total ($${total.toFixed(2)})`)
+      
+      // For CUENTA_CASA sales, costTotal should equal total (no profit)
+      if (allCuentaCasa) {
+        costTotal = total
       }
 
       // Generate invoice number
@@ -214,8 +218,7 @@ export async function POST(request: Request) {
       const invoiceNumber = `V-${nextNumber.toString().padStart(6, '0')}`
 
       // Determine inventory movement type
-      // If ALL payments are CUENTA_CASA, it's a MERMA; otherwise VENTA
-      const allCuentaCasa = payments.every((p: { method: string }) => p.method === 'CUENTA_CASA')
+      // If it's a CUENTA_CASA sale, use MERMA; otherwise VENTA
       const movementType = allCuentaCasa ? 'MERMA' : 'VENTA'
 
       // Create the sale with payments
@@ -228,8 +231,6 @@ export async function POST(request: Request) {
           discount: discountAmount,
           total,
           costTotal,
-          cashReceived: cashReceived || null,
-          changeAmount: changeAmount || null,
           tableNumber: tableNumber || null,
           customerName: customerName || null,
           notes: notes || null,

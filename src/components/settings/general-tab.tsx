@@ -336,66 +336,51 @@ export function GeneralTab() {
                   Verificar Versión
                 </Button>
                 
-                <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <PackageOpen className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Actualizar sistema existente</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Descargá estos 2 archivos y copialos a la raíz de tu proyecto. Luego ejecutá: <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">chmod +x update.sh &amp;&amp; ./update.sh</code></p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-medium">Descargas para actualizar un sistema ya instalado:</p>
+                  <p className="text-xs text-muted-foreground">Descargá estos 2 archivos y copialos a la raíz de tu proyecto existente. Luego ejecutá: <code className="bg-muted px-1 py-0.5 rounded text-xs">chmod +x update.sh &amp;&amp; ./update.sh</code></p>
+                  <div className="flex flex-wrap gap-2">
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         window.open('/api/download?type=update', '_blank')
-                        toast.success('Descargando update.tar.gz (~170KB)')
+                        toast.success('Descargando paquete de actualización (~150KB)')
                       }}
-                      className="gap-2 justify-start bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      className="gap-1.5"
                     >
-                      <PackageOpen className="h-4 w-4 text-amber-600 shrink-0" />
-                      <div className="text-left">
-                        <div className="text-xs font-medium">update.tar.gz</div>
-                        <div className="text-[10px] text-muted-foreground">~170 KB — Archivos actualizados</div>
-                      </div>
+                      <PackageOpen className="h-3.5 w-3.5" />
+                      update.tar.gz
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => {
                         window.open('/api/download-update', '_blank')
-                        toast.success('Descargando update.sh')
+                        toast.success('Descargando script de actualización')
                       }}
-                      className="gap-2 justify-start bg-white dark:bg-slate-900 border-amber-200 dark:border-amber-800/50 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      className="gap-1.5"
                     >
-                      <FileCode className="h-4 w-4 text-amber-600 shrink-0" />
-                      <div className="text-left">
-                        <div className="text-xs font-medium">update.sh</div>
-                        <div className="text-[10px] text-muted-foreground">~12 KB — Script de actualización</div>
-                      </div>
+                      <FileCode className="h-3.5 w-3.5" />
+                      update.sh
                     </Button>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Instalación nueva (desde cero)</p>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Paquete completo con todos los archivos. Extraé y ejecutá: <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">bun install &amp;&amp; bun run dev</code></p>
+                <div className="rounded-lg border p-3 space-y-2">
+                  <p className="text-sm font-medium">Instalación nueva (desde cero):</p>
+                  <p className="text-xs text-muted-foreground">Paquete completo con todos los archivos. Extraé y ejecutá: <code className="bg-muted px-1 py-0.5 rounded text-xs">bun install &amp;&amp; bun run dev</code></p>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={() => {
                       window.open('/api/download', '_blank')
-                      toast.success('Descargando kiosko-app.tar.gz (~60MB)')
+                      toast.success('Descargando sistema completo (~60MB)')
                     }}
-                    className="gap-2 justify-start bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                    className="gap-1.5"
                   >
-                    <Download className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <div className="text-left">
-                      <div className="text-xs font-medium">kiosko-app.tar.gz</div>
-                      <div className="text-[10px] text-muted-foreground">~60 MB — Sistema completo</div>
-                    </div>
+                    <Download className="h-3.5 w-3.5" />
+                    kiosko-app.tar.gz (Completo)
                   </Button>
                 </div>
               </div>

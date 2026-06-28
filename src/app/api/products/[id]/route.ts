@@ -58,12 +58,14 @@ export async function PUT(
       categoryId,
       costPrice,
       salePrice,
+      costCurrency,
+      saleCurrency,
       stock,
       minStock,
       unit,
       isActive,
       image,
-      showInPos,
+      isPosProduct,
     } = body
 
     const existingProduct = await db.product.findUnique({ where: { id } })
@@ -122,12 +124,14 @@ export async function PUT(
       if (categoryId !== undefined) updateData.categoryId = categoryId || null
       if (costPrice !== undefined) updateData.costPrice = parseFloat(costPrice)
       if (salePrice !== undefined) updateData.salePrice = parseFloat(salePrice)
+      if (costCurrency !== undefined) updateData.costCurrency = costCurrency
+      if (saleCurrency !== undefined) updateData.saleCurrency = saleCurrency
       if (stock !== undefined) updateData.stock = stock
       if (minStock !== undefined) updateData.minStock = minStock
       if (unit !== undefined) updateData.unit = unit
       if (isActive !== undefined) updateData.isActive = isActive
       if (image !== undefined) updateData.image = image || null
-      if (showInPos !== undefined) updateData.showInPos = showInPos
+      if (isPosProduct !== undefined) updateData.isPosProduct = isPosProduct
 
       const updated = await tx.product.update({
         where: { id },

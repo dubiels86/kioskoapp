@@ -28,41 +28,30 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-export interface PaymentResult {
-  payments: PaymentEntry[]
-  customerName: string
-  cashReceived: number
-  changeAmount: number
-}
-
 interface PaymentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConfirm: (result: PaymentResult) => void
+  onConfirm: (payments: PaymentEntry[], customerName: string) => void
   isProcessing: boolean
-  discount: number
 }
 
 const METHOD_ICONS: Record<PaymentMethod, React.ComponentType<{ className?: string }>> = {
   EFECTIVO: Banknote,
   TARJETA: CreditCard,
-  CUENTA_CASA: Home,
 }
 
 const METHOD_COLORS: Record<PaymentMethod, string> = {
-  EFECTIVO: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
-  TARJETA: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
-  CUENTA_CASA: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800',
+  EFECTIVO: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emergent-800',
+  TARJETA: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
 }
 
-const PAYMENT_METHODS_LIST: PaymentMethod[] = ['EFECTIVO', 'TARJETA', 'CUENTA_CASA']
+const PAYMENT_METHODS_LIST: PaymentMethod[] = ['EFECTIVO', 'TARJETA']
 
 export function PaymentDialog({
   open,
   onOpenChange,
   onConfirm,
   isProcessing,
-  discount,
 }: PaymentDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,7 +61,6 @@ export function PaymentDialog({
             onConfirm={onConfirm}
             isProcessing={isProcessing}
             onCancel={() => onOpenChange(false)}
-            discount={discount}
           />
         )}
       </DialogContent>
@@ -84,12 +72,10 @@ function PaymentDialogContent({
   onConfirm,
   isProcessing,
   onCancel,
-  discount,
 }: {
-  onConfirm: (result: PaymentResult) => void
+  onConfirm: (payments: PaymentEntry[], customerName: string) => void
   isProcessing: boolean
   onCancel: () => void
-  discount: number
 }) {
   const { cart, cartSubtotal, posType, selectedTable } = useAppStore()
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: 'EFECTIVO', amount: 0 }])
@@ -116,16 +102,16 @@ function PaymentDialogContent({
 
   const isCafeteria = posType === 'cafeteria'
   const subtotal = cartSubtotal()
-  const total = subtotal - discount
+  const total = subtotal
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
   const remaining = total - totalPaid
 
-  const cashPaymentAmount = payments
-    .filter(p => p.method === 'EFECTIVO')
-    .reduce((sum, p) => sum + p.amount, 0)
-  const cashReceivedNum = parseFloat(cashReceived) || 0
-  const cashChange = cashPaymentAmount > 0 ? cashReceivedNum - cashPaymentAmount : 0
 
+  const cashPaymentIndex = payments.findIndex((p) => p.method === 'EFECTIVO')
+  const cashReceivedNum = parseFloat(cashReceived) || 0
+  const cashChange = cashPaymentIndex >= 0 ? cashReceivedNum - payments[cashPaymentIndex].amount : 0
+
+  // Validation rules
   const canConfirm = totalPaid >= total && total > 0
 
   const handlePaymentAmountChange = (index: number, value: string) => {
@@ -137,7 +123,14 @@ function PaymentDialogContent({
 
   const handlePaymentMethodChange = (index: number, method: string) => {
     const newPayments = [...payments]
-    newPayments[index] = { ...newPayments[index], method: method as PaymentMethod }
+    const newMethod = method as PaymentMethod
+    newPayments[index] = { ...newPayments[index], method: newMethod }
+    
+    if (method === 'EFECTIVO') {
+      // If switching to EFECTIVO, reset cash received
+      setCashReceived('')
+    }
+    
     setPayments(newPayments)
   }
 
@@ -159,29 +152,6 @@ function PaymentDialogContent({
     newPayments[index] = { ...newPayments[index], amount: remainingForEntry }
     setPayments(newPayments)
   }
-
-  const handleConfirm = () => {
-    onConfirm({
-      payments,
-      customerName,
-      cashReceived: cashPaymentAmount > 0 ? cashReceivedNum : 0,
-      changeAmount: cashPaymentAmount > 0 && cashReceivedNum >= cashPaymentAmount ? cashChange : 0,
-    })
-  }
-
-  // Quick cash amounts based on total
-  const quickCashAmounts = (() => {
-    if (total <= 0) return []
-    const rounded = Math.ceil(total / 100) * 100
-    const amounts = new Set<number>()
-    amounts.add(rounded)
-    if (rounded - 50 >= total) amounts.add(rounded - 50)
-    amounts.add(rounded + 100)
-    amounts.add(rounded + 200)
-    // Add exact amount
-    amounts.add(Math.ceil(total))
-    return Array.from(amounts).sort((a, b) => a - b).slice(0, 5)
-  })()
 
   return (
     <>
@@ -214,16 +184,10 @@ function PaymentDialogContent({
             <span className="text-slate-500">Items</span>
             <span className="font-medium">{cart.length} productos</span>
           </div>
-          <div className="flex justify-between text-sm mb-1">
+          <div className="flex justify-between text-sm mb-2">
             <span className="text-slate-500">Subtotal</span>
             <span className="font-medium">{formatCurrency(subtotal)}</span>
           </div>
-          {discount > 0 && (
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-500">Descuento</span>
-              <span className="font-medium text-red-600">-{formatCurrency(discount)}</span>
-            </div>
-          )}
           <Separator className="my-2" />
           <div className="flex justify-between items-baseline">
             <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -301,7 +265,7 @@ function PaymentDialogContent({
                     autoFocus={index === 0}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && canConfirm) {
-                        handleConfirm()
+                        onConfirm(payments, customerName)
                       }
                     }}
                   />
@@ -333,7 +297,7 @@ function PaymentDialogContent({
         </div>
 
         {/* Cash received (only when there's an EFECTIVO payment) */}
-        {cashPaymentAmount > 0 && (
+        {cashPaymentIndex >= 0 && (
           <div>
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
               Efectivo recibido
@@ -347,42 +311,39 @@ function PaymentDialogContent({
                 min={0}
                 step={0.01}
                 value={cashReceived}
-                onChange={(e) => setCashReceived(e.target.value)}
+                onChange={(e) => {
+                  setCashReceived(e.target.value)
+                  // Auto-fill payment amount with cash received
+                  const newCashAmount = parseFloat(e.target.value) || 0
+                  const newPayments = [...payments]
+                  newPayments[cashPaymentIndex] = { ...newPayments[cashPaymentIndex], amount: Math.min(newCashAmount, total) }
+                  setPayments(newPayments)
+                }}
                 placeholder="0.00"
                 className="pl-7 h-12 text-lg font-semibold"
-                autoFocus={payments.length === 1 && payments[0].method === 'EFECTIVO' && payments[0].amount > 0}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && canConfirm) {
-                    handleConfirm()
+                  if (e.key === 'Enter' && canConfirm && cuentaCasaValid) {
+                    onConfirm(payments, customerName)
                   }
                 }}
               />
             </div>
-            {/* Quick cash buttons */}
-            {quickCashAmounts.length > 0 && (
-              <div className="flex gap-1.5 mt-2 flex-wrap">
-                {quickCashAmounts.map((amount) => (
-                  <Button
-                    key={amount}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCashReceived(String(amount))}
-                    className="h-7 text-xs font-medium"
-                  >
-                    {formatCurrency(amount)}
-                  </Button>
-                ))}
-              </div>
-            )}
-            {cashReceived && cashReceivedNum >= cashPaymentAmount && cashPaymentAmount > 0 && (
-              <div className="mt-2 flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
-                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                  Vuelto
-                </span>
-                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                  {formatCurrency(cashChange)}
-                </span>
+            {cashReceived && (
+              <div className="mt-2 space-y-2">
+                {cashReceivedNum >= payments[cashPaymentIndex]?.amount && payments[cashPaymentIndex]?.amount > 0 && (
+                  <div className="flex justify-between items-center bg-emerald-50 dark:bg-emerald-900/30 rounded-lg px-3 py-2 border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                      Vuelto
+                    </span>
+                    <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(cashChange)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm text-slate-500">
+                  <span>Total a pagar:</span>
+                  <span className="font-medium">{formatCurrency(total)}</span>
+                </div>
               </div>
             )}
           </div>
@@ -398,7 +359,9 @@ function PaymentDialogContent({
             <span className={remaining <= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}>
               {remaining <= 0 ? 'Pagado' : 'Restante'}
             </span>
-            <span className={`font-bold ${remaining <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+            <span className={`font-bold ${
+              remaining <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+            }`}>
               {remaining <= 0 ? formatCurrency(totalPaid) : formatCurrency(remaining)}
             </span>
           </div>
@@ -411,7 +374,7 @@ function PaymentDialogContent({
             <div className="mt-2 space-y-0.5">
               {payments.map((p, i) => (
                 <div key={i} className="flex justify-between text-xs text-slate-500">
-                  <span>{(PAYMENT_METHOD_LABELS as Record<string, string>)[normalizePaymentMethod(p.method)] || p.method}</span>
+                  <span>{PAYMENT_METHOD_LABELS[normalizePaymentMethod(p.method)]}</span>
                   <span>{formatCurrency(p.amount)}</span>
                 </div>
               ))}
@@ -422,8 +385,8 @@ function PaymentDialogContent({
         {/* Customer name */}
         <div>
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 block">
-            Cliente{' '}
-            <span className="text-slate-400 font-normal">(opcional)</span>
+            Cliente
+            <span className="text-slate-400 font-normal"> (opcional)</span>
           </label>
           <Input
             value={customerName}
@@ -443,7 +406,7 @@ function PaymentDialogContent({
           Cancelar
         </Button>
         <Button
-          onClick={handleConfirm}
+          onClick={() => onConfirm(payments, customerName)}
           disabled={!canConfirm || isProcessing}
           className="bg-slate-800 hover:bg-slate-700 shadow-sm text-white min-w-[140px]"
         >

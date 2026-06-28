@@ -28,8 +28,6 @@ interface SaleData {
   discount: number
   total: number
   costTotal: number
-  cashReceived?: number | null
-  changeAmount?: number | null
   tableNumber?: number | null
   customerName?: string | null
   notes?: string | null
@@ -187,35 +185,22 @@ export function ReceiptDialog({ open, onOpenChange, sale }: ReceiptDialogProps) 
               </div>
             </div>
 
-            {/* Cash Received / Change */}
-            {sale.cashReceived != null && sale.cashReceived > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Efectivo recibido</span>
-                    <span className="text-slate-900 dark:text-slate-100">{formatCurrency(sale.cashReceived)}</span>
-                  </div>
-                  {sale.changeAmount != null && sale.changeAmount > 0 && (
-                    <div className="flex justify-between font-bold text-sm">
-                      <span className="text-emerald-700 dark:text-emerald-400">Vuelto</span>
-                      <span className="text-emerald-700 dark:text-emerald-400">{formatCurrency(sale.changeAmount)}</span>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
             {sale.paymentMethod === 'CUENTA_CASA' && (
               <>
                 <Separator />
-                <div className="flex justify-between text-xs">
-                  <span className="text-amber-600 dark:text-amber-400">
-                    Costo total
-                  </span>
-                  <span className="text-amber-600 dark:text-amber-400">
-                    {formatCurrency(sale.costTotal)}
-                  </span>
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded p-2">
+                  <div className="flex justify-between text-sm font-medium text-amber-700 dark:text-amber-400 mb-1">
+                    <span>💵 Venta al costo</span>
+                    <span>CUENTA CASA</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-amber-600 dark:text-amber-400">
+                      Costo total
+                    </span>
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">
+                      {formatCurrency(sale.costTotal)}
+                    </span>
+                  </div>
                 </div>
               </>
             )}

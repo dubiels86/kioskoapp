@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useUsdExchangeRate, calculateUsdPrice, getExchangeRateDisplay } from '@/lib/currency'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CreatableSelect } from '@/components/ui/creatable-select'
-import { Switch } from '@/components/ui/switch'
 import { PackagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -42,8 +42,9 @@ interface Product {
   name: string
   barcode?: string | null
   sku?: string | null
-  stock: number
   costPrice: number
+  salePrice: number
+  stock: number
   stocks: ProductStock[]
 }
 
@@ -58,9 +59,12 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
   const [toWarehouseId, setToWarehouseId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('')
-  const [costPrice, setCostPrice] = useState('')
   const [reason, setReason] = useState('Recepción de stock')
-  const [showInPos, setShowInPos] = useState(true)
+  const [costPrice, setCostPrice] = useState('')
+  const [currency, setCurrency] = useState('CUP') // CUP o USD
+  const [exchangeRate, setExchangeRate] = useState(1)
+  const [usdEquivalent, setUsdEquivalent] = useState('')
+  const [loadingExchange, setLoadingExchange] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Fetch warehouses
@@ -93,6 +97,33 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     }
   }, [warehouses, toWarehouseId])
 
+  // Use exchange rate hook
+  const { data: currentExchangeRate, isLoading: isLoadingExchangeRate } = useUsdExchangeRate()
+  
+  // Set exchange rate from hook
+  useEffect(() => {
+    if (currentExchangeRate) {
+      setExchangeRate(currentExchangeRate)
+    }
+  }, [currentExchangeRate])
+
+  // Calculate USD equivalent when costPrice or exchange rate changes
+  useEffect(() => {
+    if (costPrice && currency === 'CUP') {
+      const costNum = parseFloat(costPrice)
+      if (!isNaN(costNum) && costNum > 0 && exchangeRate > 0) {
+        const usdPrice = calculateUsdPrice(costNum, exchangeRate)
+        setUsdEquivalent(usdPrice.toFixed(2))
+      } else {
+        setUsdEquivalent('')
+      }
+    } else if (currency === 'USD') {
+      setUsdEquivalent(costPrice || '')
+    } else {
+      setUsdEquivalent('')
+    }
+  }, [costPrice, currency, exchangeRate])
+
   // Filter products
   const filteredProducts = useMemo(() => {
     return products
@@ -110,15 +141,6 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     return products.find((p) => p.id === productId)
   }, [productId, products])
 
-  // Auto-fill costPrice when product is selected
-  useEffect(() => {
-    if (selectedProduct) {
-      setCostPrice(selectedProduct.costPrice > 0 ? String(selectedProduct.costPrice) : '')
-    } else {
-      setCostPrice('')
-    }
-  }, [selectedProduct])
-
   const toWarehouse = useMemo(() => {
     return warehouses.find((w) => w.id === toWarehouseId)
   }, [toWarehouseId, warehouses])
@@ -127,9 +149,11 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
     setToWarehouseId('')
     setProductId('')
     setQuantity('')
-    setCostPrice('')
     setReason('Recepción de stock')
-    setShowInPos(true)
+    setCostPrice('')
+    setCurrency('CUP')
+    setExchangeRate(1)
+    setUsdEquivalent('')
   }
 
   const handleSubmit = async () => {
@@ -145,10 +169,6 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
       toast.error('Ingresa una cantidad válida')
       return
     }
-    if (!costPrice || parseFloat(costPrice) < 0) {
-      toast.error('Ingresa un precio de costo válido')
-      return
-    }
 
     setSaving(true)
     try {
@@ -159,8 +179,10 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
           productId,
           warehouseId: toWarehouseId,
           quantity: parseInt(quantity),
-          costPrice: parseFloat(costPrice),
           reason: reason.trim() || 'Recepción de stock',
+          costPrice: costPrice.trim() ? parseFloat(costPrice) : undefined,
+          costCurrency: currency,
+          exchangeRate: currency === 'CUP' ? exchangeRate : 1,
         }),
       })
 
@@ -234,13 +256,7 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
                 const res = await fetch('/api/products', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    name, 
-                    costPrice: parseFloat(costPrice) || 0, 
-                    salePrice: parseFloat(costPrice) || 0, 
-                    unit: 'unidad',
-                    showInPos 
-                  }),
+                  body: JSON.stringify({ name, costPrice: 0, salePrice: 0, unit: 'unidad' }),
                 })
                 if (!res.ok) throw new Error('Error al crear producto')
                 const product = await res.json()
@@ -269,6 +285,9 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
                   {destinationStock} unidades
                 </span>
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Precio costo actual: <span className="font-medium">${selectedProduct.costPrice?.toFixed(2) || '0.00'}</span>
+              </p>
             </div>
           )}
 
@@ -285,68 +304,105 @@ export function StockReceivingDialog({ open, onOpenChange }: StockReceivingDialo
             />
           </div>
 
-          {/* Cost Price */}
-          <div className="grid gap-2">
-            <Label htmlFor="receive-costPrice">Precio de Costo *</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
-              <Input
-                id="receive-costPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                placeholder="0.00"
-                className="pl-7"
-              />
+          {/* Cost Price and Currency */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="receive-currency">Moneda</Label>
+              <select
+                id="receive-currency"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="CUP">CUP (Peso Cubano)</option>
+                <option value="USD">USD (Dólar)</option>
+              </select>
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="receive-costPrice">Precio de costo (opcional)</Label>
+              <div className="relative">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                  {currency === 'USD' ? 'US$' : '$'}
+                </span>
+                <Input
+                  id="receive-costPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder={currency === 'USD' ? '0.00 USD' : '0.00 CUP'}
+                  className="pl-10"
+                />
+              </div>
             </div>
           </div>
-
-          {/* Show in POS toggle */}
-          <div className="flex items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">Mostrar en Punto de Venta</Label>
-              <p className="text-xs text-muted-foreground">
-                Los productos sin esta opción solo se usan en reparaciones o internamente
+          
+          {/* Exchange rate and USD equivalent */}
+          {currency === 'CUP' && (
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="receive-exchangeRate">Tipo de cambio USD del día</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    1 USD =
+                  </span>
+                  <Input
+                    id="receive-exchangeRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={exchangeRate}
+                    onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                    placeholder="Tipo de cambio"
+                    className="pl-16"
+                    disabled={loadingExchange}
+                  />
+                </div>
+                {isLoadingExchangeRate && (
+                  <p className="text-xs text-muted-foreground">Cargando tipo de cambio actual...</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {getExchangeRateDisplay(exchangeRate)}
+                </p>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="receive-usdEquivalent">Equivalente en USD</Label>
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400">
+                    US$
+                  </span>
+                  <Input
+                    id="receive-usdEquivalent"
+                    type="text"
+                    value={usdEquivalent ? `${usdEquivalent} USD` : ''}
+                    readOnly
+                    placeholder="Calculado automáticamente"
+                    className="pl-10 bg-gray-50 dark:bg-gray-900"
+                  />
+                </div>
+                {costPrice && usdEquivalent && (
+                  <p className="text-xs text-muted-foreground">
+                    {costPrice} {currency} = {usdEquivalent} USD
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {currency === 'USD' && costPrice && (
+            <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 p-3">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Precio en dólares: <span className="font-medium">US$ {costPrice}</span>
               </p>
             </div>
-            <Switch
-              checked={showInPos}
-              onCheckedChange={setShowInPos}
-            />
-          </div>
-
-          {/* Weighted average preview */}
-          {selectedProduct && destinationStock !== null && destinationStock > 0 && costPrice && parseFloat(costPrice) > 0 && selectedProduct.costPrice !== parseFloat(costPrice) && (() => {
-            const currentStock = destinationStock
-            const currentCost = selectedProduct.costPrice
-            const newQty = parseInt(quantity) || 0
-            const newCost = parseFloat(costPrice)
-            const totalStock = currentStock + newQty
-            const weightedAvg = totalStock > 0 ? (currentStock * currentCost + newQty * newCost) / totalStock : 0
-            return (
-              <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 p-3 space-y-1">
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">📊 Promedio Ponderado</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <span className="text-muted-foreground">Stock actual:</span>
-                  <span className="font-medium">{currentStock} uds</span>
-                  <span className="text-muted-foreground">Costo actual:</span>
-                  <span className="font-medium">${currentCost.toFixed(2)}</span>
-                  <span className="text-muted-foreground">Nueva cantidad:</span>
-                  <span className="font-medium">{newQty} uds</span>
-                  <span className="text-muted-foreground">Nuevo costo:</span>
-                  <span className="font-medium">${newCost.toFixed(2)}</span>
-                </div>
-                <div className="pt-1 border-t border-emerald-200 dark:border-emerald-800 mt-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium text-emerald-700 dark:text-emerald-400">Costo promedio resultante:</span>
-                    <span className="font-bold text-emerald-700 dark:text-emerald-400">${weightedAvg.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )
-          })()}
+          )}
+          
+          <p className="text-xs text-muted-foreground -mt-2">
+            Actualiza el precio de costo del producto si es diferente al actual
+          </p>
 
           {/* Reason */}
           <div className="grid gap-2">

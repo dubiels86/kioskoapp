@@ -4,54 +4,12 @@
  * Actualizar este valor con cada release.
  * Formato: MAJOR.MINOR.PATCH
  */
-export const APP_VERSION = '0.9.0'
+export const APP_VERSION = '0.4.0'
 
 /**
  * Historial de versiones y cambios
  */
 export const CHANGELOG: Record<string, string[]> = {
-  '0.9.0': [
-    'Producto: opción "Mostrar en Punto de Venta" (ocultar productos internos del POS)',
-    'Reparaciones: seleccionar piezas desde inventario con autocompletado de precios',
-    'Recepción de stock: campo precio de costo con cálculo de precio ponderado',
-    'Compras: cálculo automático de precio de costo ponderado al recibir',
-    'Inventario: columna POS indica si el producto se muestra en ventas',
-    'Recepción: opción "Mostrar en POS" al crear producto desde recepción',
-    'Reparaciones: agregar/editar repuestos también al editar una reparación',
-  ],
-  '0.8.0': [
-    'Pagos divididos: múltiples medios de pago por venta',
-    'Efectivo recibido y cálculo de vuelto automático',
-    'Botones rápidos de montos de efectivo',
-    'Reportes con desglose correcto por medio de pago (incluyendo MIXTO)',
-    'Medios de pago personalizables desde configuración',
-    'Recibo muestra efectivo recibido y vuelto',
-    'Mejoras en diálogo de cobro (descuento visible, resumen de pagos)',
-  ],
-  '0.7.0': [
-    'Pagos mixtos: reportes por método de pago correctos',
-    'Dinero entregado por el cliente y cálculo de vuelto',
-    'Botones de montos rápidos en efectivo',
-    'Descuento visible en diálogo de cobro',
-    'Recibo muestra efectivo recibido y vuelto',
-    'Listado de ventas muestra desglose por método de pago',
-  ],
-  '0.6.0': [
-    'Reportes por rango de fechas',
-    'Tab de Gastos en reportes',
-    'Tab de Productos más vendidos',
-    'Evolución de ventas por día (modo rango)',
-    'Ganancia neta (ventas - costo - gastos)',
-    'Compras incluidas en reportes',
-  ],
-  '0.5.0': [
-    'Sistema de monedas múltiples',
-    'Tipos de cambio entre monedas',
-    'Selector de moneda en el sidebar',
-    'Historial de cambios de tipo de cambio',
-    'Conversión en tiempo real al visualizar precios',
-    'Moneda principal configurable',
-  ],
   '0.4.0': [
     'Sistema de actualización automática',
     'Verificación de versión desde la configuración',

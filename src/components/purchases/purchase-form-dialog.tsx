@@ -59,6 +59,8 @@ interface PurchaseItem {
   productName: string
   quantity: number
   costPrice: number
+  costCurrency: string
+  exchangeRate: number
 }
 
 interface PurchaseFormDialogProps {
@@ -73,6 +75,8 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
   const [supplierId, setSupplierId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null)
   const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [currencyCode, setCurrencyCode] = useState('ARS')
+  const [exchangeRate, setExchangeRate] = useState('1')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<PurchaseItem[]>([])
   const [productSearch, setProductSearch] = useState('')
@@ -147,18 +151,26 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
         productName: product.name,
         quantity: 1,
         costPrice: product.costPrice,
+        costCurrency: currencyCode,
+        exchangeRate: parseFloat(exchangeRate) || 1,
       },
     ])
     setProductSearch('')
   }
 
-  const updateItem = (index: number, field: 'quantity' | 'costPrice', value: string) => {
+  const updateItem = (index: number, field: 'quantity' | 'costPrice' | 'costCurrency' | 'exchangeRate', value: string) => {
     const newItems = [...items]
-    const numValue = parseFloat(value) || 0
     if (field === 'quantity') {
+      const numValue = parseFloat(value) || 0
       newItems[index] = { ...newItems[index], quantity: Math.max(1, Math.round(numValue)) }
-    } else {
+    } else if (field === 'costPrice') {
+      const numValue = parseFloat(value) || 0
       newItems[index] = { ...newItems[index], costPrice: Math.max(0, numValue) }
+    } else if (field === 'costCurrency') {
+      newItems[index] = { ...newItems[index], costCurrency: value.toUpperCase() }
+    } else if (field === 'exchangeRate') {
+      const numValue = parseFloat(value) || 1
+      newItems[index] = { ...newItems[index], exchangeRate: Math.max(0.0001, numValue) }
     }
     setItems(newItems)
   }
@@ -184,11 +196,15 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
         supplierId: supplierId === 'none' ? undefined : supplierId || undefined,
         warehouseId,
         invoiceNumber: invoiceNumber.trim() || undefined,
+        currencyCode,
+        exchangeRate: parseFloat(exchangeRate) || 1,
         notes: notes.trim() || undefined,
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
           costPrice: item.costPrice,
+          costCurrency: item.costCurrency,
+          exchangeRate: item.exchangeRate,
         })),
       }
 
@@ -267,6 +283,31 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
                 value={invoiceNumber}
                 onChange={(e) => setInvoiceNumber(e.target.value)}
                 placeholder="N° de factura (opcional)"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="currency">Moneda de compra</Label>
+              <Input
+                id="currency"
+                value={currencyCode}
+                onChange={(e) => setCurrencyCode(e.target.value.toUpperCase())}
+                placeholder="ARS"
+                maxLength={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="exchangeRate">Tipo de cambio</Label>
+              <Input
+                id="exchangeRate"
+                type="number"
+                step="0.0001"
+                min="0.0001"
+                value={exchangeRate}
+                onChange={(e) => setExchangeRate(e.target.value)}
+                placeholder="1.0"
               />
             </div>
           </div>
@@ -355,6 +396,8 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
                     <TableHead>Producto</TableHead>
                     <TableHead className="w-[100px]">Cantidad</TableHead>
                     <TableHead className="w-[130px]">P. Costo</TableHead>
+                    <TableHead className="w-[100px]">Moneda</TableHead>
+                    <TableHead className="w-[130px]">Tipo Cambio</TableHead>
                     <TableHead className="text-right">Subtotal</TableHead>
                     <TableHead className="w-[50px]" />
                   </TableRow>
@@ -379,6 +422,24 @@ export function PurchaseFormDialog({ open, onOpenChange }: PurchaseFormDialogPro
                           min="0"
                           value={item.costPrice}
                           onChange={(e) => updateItem(index, 'costPrice', e.target.value)}
+                          className="h-8 w-28 text-sm"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={item.costCurrency}
+                          onChange={(e) => updateItem(index, 'costCurrency', e.target.value)}
+                          className="h-8 w-20 text-sm"
+                          maxLength={3}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          min="0.0001"
+                          value={item.exchangeRate}
+                          onChange={(e) => updateItem(index, 'exchangeRate', e.target.value)}
                           className="h-8 w-28 text-sm"
                         />
                       </TableCell>

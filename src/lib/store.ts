@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import type { AppView, CartItem, PaymentMethod, RolePermission } from '@/lib/types';
-import type { CurrencyInfo } from '@/lib/format';
 
 export type PosType = 'kiosko' | 'cafeteria';
 
@@ -68,10 +67,6 @@ interface AppState {
   // Warehouse
   selectedWarehouseId: string | null;
   setSelectedWarehouseId: (id: string | null) => void;
-
-  // Active display currency (for showing prices in a different currency)
-  activeCurrency: CurrencyInfo | null;
-  setActiveCurrency: (currency: CurrencyInfo | null) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -256,8 +251,4 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Warehouse
   selectedWarehouseId: null,
   setSelectedWarehouseId: (id) => set({ selectedWarehouseId: id }),
-
-  // Active display currency
-  activeCurrency: null,
-  setActiveCurrency: (currency) => set({ activeCurrency: currency }),
 }));

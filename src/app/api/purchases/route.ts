@@ -36,7 +36,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { supplierId, invoiceNumber, notes, items, warehouseId } = body
+    const { supplierId, invoiceNumber, currencyCode, exchangeRate, notes, items, warehouseId } = body
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -91,15 +91,19 @@ export async function POST(request: Request) {
         data: {
           supplierId: supplierId || null,
           invoiceNumber: invoiceNumber || null,
+          currencyCode: currencyCode || 'ARS',
+          exchangeRate: exchangeRate || 1,
           totalAmount,
           status: 'RECIBIDA',
           notes: notes || null,
           items: {
-            create: items.map((item: { productId: string; quantity: number; costPrice: number }, index: number) => ({
+            create: items.map((item: { productId: string; quantity: number; costPrice: number; costCurrency?: string; exchangeRate?: number }, index: number) => ({
               productId: item.productId,
               warehouseId: itemWarehouses[index],
               quantity: item.quantity,
               costPrice: parseFloat(item.costPrice),
+              costCurrency: item.costCurrency || currencyCode || 'ARS',
+              exchangeRate: item.exchangeRate || exchangeRate || 1,
               subtotal: item.quantity * parseFloat(item.costPrice),
             })),
           },
@@ -181,24 +185,6 @@ export async function POST(request: Request) {
             referenceId: newPurchase.id,
           },
         })
-
-        // Calculate weighted average cost price
-        const newCostPrice = parseFloat(item.costPrice)
-        if (!isNaN(newCostPrice) && newCostPrice >= 0) {
-          const previousStock = product.stock // product.stock is the stock BEFORE increment
-          if (previousStock > 0) {
-            const weightedAvg = (previousStock * product.costPrice + item.quantity * newCostPrice) / updatedProduct.stock
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { costPrice: Math.round(weightedAvg * 100) / 100 },
-            })
-          } else {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: { costPrice: newCostPrice },
-            })
-          }
-        }
       }
 
       return newPurchase

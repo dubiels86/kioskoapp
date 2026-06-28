@@ -50,9 +50,11 @@ import {
   Expand,
   PackagePlus,
   Camera,
+  History,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatCurrencyWithCode } from '@/lib/format'
+import { CurrencyBadge } from '@/components/ui/currency-badge'
 import { ProductFormDialog } from './product-form-dialog'
 import { CategoryFormDialog } from './category-form-dialog'
 import { MovementTable } from './movement-table'
@@ -60,6 +62,9 @@ import { WarehouseView } from './warehouse-view'
 import { StockTransferDialog } from './stock-transfer-dialog'
 import { StockReceivingDialog } from './stock-receiving-dialog'
 import { ProductImageDialog } from './product-image-dialog'
+import { ExchangeRateBanner } from './exchange-rate-banner'
+import { ExchangeRateUpdateDialog } from './exchange-rate-update-dialog'
+import { ExchangeRateHistory } from './exchange-rate-history'
 
 interface Category {
   id: string
@@ -89,11 +94,12 @@ interface Product {
   category?: { id: string; name: string } | null
   costPrice: number
   salePrice: number
+  costCurrency: string
+  saleCurrency: string
   stock: number
   minStock: number
   unit: string
   isActive: boolean
-  showInPos: boolean
   image?: string | null
   stocks?: ProductStock[]
 }
@@ -123,6 +129,7 @@ export function InventoryView() {
   const [receivingDialogOpen, setReceivingDialogOpen] = useState(false)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [imageProduct, setImageProduct] = useState<Product | null>(null)
+  const [exchangeRateUpdateOpen, setExchangeRateUpdateOpen] = useState(false)
 
   // Stock expansion
   const [expandedStock, setExpandedStock] = useState<string | null>(null)
@@ -258,6 +265,8 @@ export function InventoryView() {
 
   return (
     <div className="space-y-4">
+      <ExchangeRateBanner />
+      
       <Tabs defaultValue="products" className="w-full">
         <TabsList>
           <TabsTrigger value="products" className="gap-1.5">
@@ -271,6 +280,10 @@ export function InventoryView() {
           <TabsTrigger value="warehouses" className="gap-1.5">
             <WarehouseIcon className="h-4 w-4" />
             Almacenes
+          </TabsTrigger>
+          <TabsTrigger value="exchangeHistory" className="gap-1.5">
+            <History className="h-4 w-4" />
+            Historial USD
           </TabsTrigger>
         </TabsList>
 
@@ -328,6 +341,14 @@ export function InventoryView() {
               </Button>
               <Button
                 variant="outline"
+                onClick={() => setExchangeRateUpdateOpen(true)}
+                className="gap-1.5 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30"
+              >
+                <span className="text-lg">💵</span>
+                Actualizar USD
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => {
                   setEditingCategory(null)
                   setCategoryDialogOpen(true)
@@ -377,20 +398,19 @@ export function InventoryView() {
                     </div>
                   </TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead className="text-center">POS</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {productsLoading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       Cargando productos...
                     </TableCell>
                   </TableRow>
                 ) : paginatedProducts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                       No se encontraron productos
                     </TableCell>
                   </TableRow>
@@ -450,8 +470,18 @@ export function InventoryView() {
                             <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">{formatCurrency(product.costPrice)}</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(product.salePrice)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span>{formatCurrencyWithCode(product.costPrice, product.costCurrency)}</span>
+                            <CurrencyBadge currencyCode={product.costCurrency} className="text-xs" />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          <div className="flex flex-col items-end gap-1">
+                            <span>{formatCurrencyWithCode(product.salePrice, product.saleCurrency)}</span>
+                            <CurrencyBadge currencyCode={product.saleCurrency} className="text-xs" />
+                          </div>
+                        </TableCell>
                         <TableCell className={`text-right ${getStockColor(product.stock, product.minStock)}`}>
                           <div className="flex items-center justify-end gap-1">
                             {product.stock}
@@ -477,9 +507,6 @@ export function InventoryView() {
                               Inactivo
                             </Badge>
                           )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={`inline-flex h-3 w-3 rounded-full ${product.showInPos ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -513,7 +540,7 @@ export function InventoryView() {
                       {/* Expanded stock breakdown */}
                       {expandedStock === product.id && product.stocks && product.stocks.length > 1 && (
                         <TableRow key={`${product.id}-stock`}>
-                          <TableCell colSpan={10} className="bg-slate-50 dark:bg-slate-900/30 p-0">
+                          <TableCell colSpan={9} className="bg-slate-50 dark:bg-slate-900/30 p-0">
                             <div className="p-3 px-6">
                               <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
                                 Stock por depósito
@@ -657,6 +684,12 @@ export function InventoryView() {
         <TabsContent value="warehouses">
           <WarehouseView />
         </TabsContent>
+
+        <TabsContent value="exchangeHistory">
+          <div className="space-y-4">
+            <ExchangeRateHistory />
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Product Form Dialog */}
@@ -685,6 +718,12 @@ export function InventoryView() {
         open={imageDialogOpen}
         onOpenChange={setImageDialogOpen}
         product={imageProduct}
+      />
+
+      {/* Exchange Rate Update Dialog */}
+      <ExchangeRateUpdateDialog
+        open={exchangeRateUpdateOpen}
+        onOpenChange={setExchangeRateUpdateOpen}
       />
 
       {/* Stock Transfer Dialog */}
