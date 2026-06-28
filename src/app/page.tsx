@@ -93,7 +93,7 @@ export default function Home() {
       <DebugInfo />
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:flex shrink-0 sticky top-0 h-screen debug-sidebar">
+        <aside className="hidden md:flex shrink-0 sticky top-0 h-screen debug-sidebar">
           <AppSidebar />
         </aside>
 
@@ -103,7 +103,7 @@ export default function Home() {
           <AppHeader />
 
           {/* Desktop Title Bar */}
-          <div className="hidden lg:flex items-center h-14 px-6 border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
+          <div className="hidden md:flex items-center h-14 px-6 border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
             <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
               {VIEW_LABELS[activeView]}
             </h1>
