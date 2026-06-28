@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Users, Shield, Coins, Banknote, Settings as SettingsIcon, Store } from 'lucide-react'
+import { Users, Shield, Coins, Banknote, Settings as SettingsIcon, Store, DatabaseBackup } from 'lucide-react'
 import { UsersTab } from './users-tab'
 import { RolesTab } from './roles-tab'
 import { CurrencyTab } from './currency-tab'
 import { DenominationsTab } from './denominations-tab'
 import { GeneralTab } from './general-tab'
+import { BackupsTab } from './backups-tab'
 
 export function SettingsView() {
   return (
@@ -36,6 +37,10 @@ export function SettingsView() {
             <Store className="h-4 w-4" />
             General
           </TabsTrigger>
+          <TabsTrigger value="backups" className="gap-1.5">
+            <DatabaseBackup className="h-4 w-4" />
+            Respaldos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-4">
@@ -56,6 +61,10 @@ export function SettingsView() {
 
         <TabsContent value="general" className="mt-4">
           <GeneralTab />
+        </TabsContent>
+
+        <TabsContent value="backups" className="mt-4">
+          <BackupsTab />
         </TabsContent>
       </Tabs>
     </div>
