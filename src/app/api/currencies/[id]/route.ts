@@ -4,14 +4,15 @@ import { NextRequest, NextResponse } from 'next/server'
 // PUT /api/currencies/[id] - Update currency
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const data = await request.json()
 
     // Validate that only allowed fields are being updated
     const allowedFields = ['exchangeRate', 'isActive', 'symbol', 'name', 'locale']
-    const updates: any = {}
+    const updates: Record<string, unknown> = {}
 
     for (const key in data) {
       if (allowedFields.includes(key)) {
@@ -30,7 +31,7 @@ export async function PUT(
     // Update currency
     const updatedCurrency = await db.currency.update({
       where: {
-        id: params.id,
+        id,
       },
       data: updates,
     })
