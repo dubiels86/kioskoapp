@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreatableSelect } from '@/components/ui/creatable-select'
 import { ImagePlus, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -81,8 +82,8 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const [categoryId, setCategoryId] = useState('')
   const [costPrice, setCostPrice] = useState('')
   const [salePrice, setSalePrice] = useState('')
-  const [costCurrency, setCostCurrency] = useState('ARS')
-  const [saleCurrency, setSaleCurrency] = useState('ARS')
+  const [costCurrency, setCostCurrency] = useState('CUP')
+  const [saleCurrency, setSaleCurrency] = useState('CUP')
   const [stock, setStock] = useState('')
   const [minStock, setMinStock] = useState('')
   const [unit, setUnit] = useState('unidad')
@@ -98,8 +99,8 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setCategoryId(product.categoryId || '')
       setCostPrice(String(product.costPrice))
       setSalePrice(String(product.salePrice))
-      setCostCurrency(product.costCurrency || 'ARS')
-      setSaleCurrency(product.saleCurrency || 'ARS')
+      setCostCurrency(product.costCurrency || 'CUP')
+      setSaleCurrency(product.saleCurrency || 'CUP')
       setStock(String(product.stock))
       setMinStock(String(product.minStock))
       setUnit(product.unit)
@@ -112,8 +113,8 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setCategoryId('')
       setCostPrice('')
       setSalePrice('')
-      setCostCurrency('ARS')
-      setSaleCurrency('ARS')
+      setCostCurrency('CUP')
+      setSaleCurrency('CUP')
       setStock('')
       setMinStock('5')
       setUnit('unidad')
@@ -381,23 +382,27 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="costCurrency">Moneda costo</Label>
-              <Input
-                id="costCurrency"
-                value={costCurrency}
-                onChange={(e) => setCostCurrency(e.target.value.toUpperCase())}
-                placeholder="ARS"
-                maxLength={3}
-              />
+              <Select value={costCurrency} onValueChange={setCostCurrency}>
+                <SelectTrigger id="costCurrency">
+                  <SelectValue placeholder="Seleccionar moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CUP">CUP - Peso Cubano ($MN)</SelectItem>
+                  <SelectItem value="USD">USD - Dólar (US$)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="saleCurrency">Moneda venta</Label>
-              <Input
-                id="saleCurrency"
-                value={saleCurrency}
-                onChange={(e) => setSaleCurrency(e.target.value.toUpperCase())}
-                placeholder="ARS"
-                maxLength={3}
-              />
+              <Select value={saleCurrency} onValueChange={setSaleCurrency}>
+                <SelectTrigger id="saleCurrency">
+                  <SelectValue placeholder="Seleccionar moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CUP">CUP - Peso Cubano ($MN)</SelectItem>
+                  <SelectItem value="USD">USD - Dólar (US$)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

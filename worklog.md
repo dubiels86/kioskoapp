@@ -162,3 +162,34 @@ Stage Summary:
 - CUP es la moneda base y la opción por defecto al abrir la pestaña Moneda
 - Configuración guardada en BD con CUP como moneda activa
 - Eliminadas todas las referencias a ARS, EUR, BRL, MXN, COP, CLP, PEN, UYU, etc. del código
+
+---
+Task ID: 7
+Agent: Main Agent
+Task: Modal Nuevo Producto - moneda costo y moneda venta mediante Select
+
+Work Log:
+- Encontrado el modal en src/components/inventory/product-form-dialog.tsx
+- Los campos "Moneda costo" y "Moneda venta" eran inputs de texto libres (Input) con default 'ARS'
+- Cambios realizados:
+  * Agregado import de Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+  * Cambiados defaults de 'ARS' a 'CUP' en 4 lugares (useState inicial + 2 useEffect branches)
+  * Reemplazados ambos Input por componentes Select con opciones:
+    - CUP - Peso Cubano ($MN)
+    - USD - Dólar (US$)
+- Lint pasa limpio en el archivo modificado
+- Verificado con Agent Browser:
+  * Login como dubiel
+  * Inventario > Productos > click "Nuevo Producto"
+  * Ambos campos (Moneda costo y Moneda venta) ahora son Select dropdowns
+  * Default mostrado: "CUP - Peso Cubano ($MN)" en ambos
+  * Al abrir dropdown: solo aparecen 2 opciones (CUP y USD) ✓
+  * Seleccionado USD en Moneda costo → se actualizó correctamente
+  * Modo edición: producto existente "Producto de Prueba" cargó "CUP - Peso Cubano ($MN)" en ambos Selects correctamente
+  * Sin errores en consola
+
+Stage Summary:
+- Modal Nuevo/Editar Producto ahora usa Select dropdowns para moneda costo y venta
+- Solo disponibles: CUP y USD (consistente con la configuración global)
+- Default: CUP (consistente con la moneda base)
+- Modo edición carga correctamente el valor guardado del producto
