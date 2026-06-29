@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Store, Save, Coffee, ShoppingBag, Info, RefreshCw, Download, PackageOpen, FileCode } from 'lucide-react'
+import { Store, Save, Coffee, ShoppingBag, Info, RefreshCw, Download, PackageOpen, FileCode, Warehouse } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/lib/store'
 import type { PosType } from '@/lib/store'
@@ -38,13 +38,14 @@ function parseGeneralSettings(settings: Record<string, { key: string; value: str
 }
 
 function parsePosSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined) {
-  const result = { posType: 'kiosko' as PosType, posTables: 10 }
+  const result = { posType: 'kiosko' as PosType, posTables: 10, posWarehouseId: '' }
   if (!settings?.pos) return result
   for (const s of settings.pos) {
     try {
       const val = JSON.parse(s.value)
       if (s.key === 'pos_type') result.posType = val === 'cafeteria' ? 'cafeteria' : 'kiosko'
       if (s.key === 'pos_tables') result.posTables = typeof val === 'number' ? val : parseInt(val) || 10
+      if (s.key === 'pos_warehouse_id') result.posWarehouseId = typeof val === 'string' ? val : String(val || '')
     } catch {
       // ignore
     }
@@ -54,7 +55,7 @@ function parsePosSettings(settings: Record<string, { key: string; value: string;
 
 export function GeneralTab() {
   const queryClient = useQueryClient()
-  const { setPosType, setPosTables } = useAppStore()
+  const { setPosType, setPosTables, setSelectedWarehouseId } = useAppStore()
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -62,6 +63,16 @@ export function GeneralTab() {
       const res = await fetch('/api/settings')
       if (!res.ok) throw new Error('Error al obtener configuración')
       return res.json() as Record<string, { key: string; value: string; label: string }[]>
+    },
+  })
+
+  // Fetch warehouses for POS selection
+  const { data: warehouses = [] } = useQuery<{ id: string; name: string; code: string; type: string }[]>({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const res = await fetch('/api/warehouses')
+      if (!res.ok) throw new Error('Error al obtener depósitos')
+      return res.json()
     },
   })
 
@@ -75,6 +86,7 @@ export function GeneralTab() {
   const [invoiceNextNumber, setInvoiceNextNumber] = useState(parsed.nextNumber)
   const [posType, setPosTypeLocal] = useState<PosType>(parsedPos.posType)
   const [posTables, setPosTablesLocal] = useState(String(parsedPos.posTables))
+  const [posWarehouseId, setPosWarehouseIdLocal] = useState(parsedPos.posWarehouseId)
 
   // Sync from query data
   const [prevName, setPrevName] = useState(parsed.name)
@@ -84,6 +96,7 @@ export function GeneralTab() {
   const [prevNum, setPrevNum] = useState(parsed.nextNumber)
   const [prevPosType, setPrevPosType] = useState(parsedPos.posType)
   const [prevPosTables, setPrevPosTables] = useState(String(parsedPos.posTables))
+  const [prevPosWarehouseId, setPrevPosWarehouseId] = useState(parsedPos.posWarehouseId)
 
   if (parsed.name !== prevName) { setBusinessName(parsed.name); setPrevName(parsed.name) }
   if (parsed.address !== prevAddr) { setBusinessAddress(parsed.address); setPrevAddr(parsed.address) }
@@ -92,6 +105,7 @@ export function GeneralTab() {
   if (parsed.nextNumber !== prevNum) { setInvoiceNextNumber(parsed.nextNumber); setPrevNum(parsed.nextNumber) }
   if (parsedPos.posType !== prevPosType) { setPosTypeLocal(parsedPos.posType); setPrevPosType(parsedPos.posType) }
   if (String(parsedPos.posTables) !== prevPosTables) { setPosTablesLocal(String(parsedPos.posTables)); setPrevPosTables(String(parsedPos.posTables)) }
+  if (parsedPos.posWarehouseId !== prevPosWarehouseId) { setPosWarehouseIdLocal(parsedPos.posWarehouseId); setPrevPosWarehouseId(parsedPos.posWarehouseId) }
 
   const saveMutation = useMutation({
     mutationFn: async (data: Record<string, string>) => {
@@ -112,6 +126,10 @@ export function GeneralTab() {
       setPosType(posType)
       const tables = parseInt(posTables) || 10
       setPosTables(tables)
+      // Sync selected warehouse in store with the configured one
+      if (posWarehouseId) {
+        setSelectedWarehouseId(posWarehouseId)
+      }
       toast.success('Configuración guardada correctamente')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -137,6 +155,7 @@ export function GeneralTab() {
       invoice_next_number: JSON.stringify(nextNum),
       pos_type: JSON.stringify(posType),
       pos_tables: JSON.stringify(tables || 10),
+      pos_warehouse_id: JSON.stringify(posWarehouseId || ''),
     })
   }
 
@@ -257,6 +276,30 @@ export function GeneralTab() {
                       : 'Solo disponible en modo Cafetería'}
                   </p>
                 </div>
+              </div>
+
+              {/* Warehouse selector for POS */}
+              <div className="space-y-2">
+                <Label htmlFor="pos-warehouse" className="flex items-center gap-1.5">
+                  <Warehouse className="h-4 w-4" />
+                  Almacén para POS
+                </Label>
+                <Select value={posWarehouseId || '__none__'} onValueChange={(v) => setPosWarehouseIdLocal(v === '__none__' ? '' : v)}>
+                  <SelectTrigger id="pos-warehouse">
+                    <SelectValue placeholder="Automático (Ventas)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Automático (tipo Ventas)</SelectItem>
+                    {warehouses.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name} ({w.code}) — {w.type === 'VENTAS' ? 'Ventas' : w.type === 'PRINCIPAL' ? 'Principal' : 'Secundario'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Elegí de qué almacén se mostrarán los productos en el POS. Si elegís "Automático", se usará el primer almacén de tipo Ventas.
+                </p>
               </div>
             </div>
 

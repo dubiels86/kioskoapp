@@ -193,3 +193,49 @@ Stage Summary:
 - Solo disponibles: CUP y USD (consistente con la configuración global)
 - Default: CUP (consistente con la moneda base)
 - Modo edición carga correctamente el valor guardado del producto
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: En Ajustes, elegir de qué almacén se muestran los productos en POS
+
+Work Log:
+- Análisis: el backend /api/products ya soporta parámetro warehouseId, y pos-view.tsx ya lo pasaba al ProductGrid. Solo faltaba poder configurar qué almacén usar.
+- Backend (src/app/api/settings/route.ts): agregada setting por defecto:
+  * { key: 'pos_warehouse_id', value: '""', label: 'Almacén para POS', group: 'pos' }
+- Frontend Ajustes (src/components/settings/general-tab.tsx):
+  * Importado icono Warehouse de lucide-react
+  * Agregado fetch de /api/warehouses para poblar el Select
+  * Actualizado parsePosSettings para leer pos_warehouse_id (string)
+  * Agregado estado local posWarehouseId con sync desde settings
+  * Agregado setSelectedWarehouseId del store para sincronizar al guardar
+  * En onSuccess: si hay posWarehouseId configurado, sincroniza el store
+  * En handleSave: incluye pos_warehouse_id en el body del PUT
+  * UI: agregado Select "Almacén para POS" debajo de Tipo de POS y Mesas, con:
+    - Opción "Automático (tipo Ventas)" con valor especial __none__
+    - Opciones dinámicas de warehouses: "Nombre (CODE) — Tipo"
+    - Texto de ayuda explicativo
+- Frontend POS (src/components/pos/pos-view.tsx):
+  * Actualizado parsePosTypeFromSettings para leer pos_warehouse_id
+  * Reescrito useEffect de selección de almacén:
+    - Si posWarehouseId configurado y existe en la lista → usarlo
+    - Si no, fallback al primer almacén tipo VENTAS
+    - Si no hay VENTAS, fallback al primer almacén
+    - Solo llama setSelectedWarehouseId si el ID cambió (evita loops)
+- Lint pasa limpio en los 3 archivos modificados
+- Verificado con Agent Browser (login como dubiel):
+  * Ajustes → General: aparece nuevo Select "Almacén para POS"
+  * Dropdown muestra: Automático, Almacén Principal (ALM-001) — Principal, PDV (PDV) — Secundario
+  * Selección de PDV + Guardar → toast "Configuración guardada correctamente"
+  * Navegué al POS: mostró "Almacén: PDV" ✓
+  * Volví a Ajustes, seleccioné "Automático" + Guardar → POS mostró "Almacén Principal" (primero, sin VENTAS en BD) ✓
+  * Volví a seleccionar "Almacén Principal" + Guardar → POS mostró "Almacén Principal" ✓
+  * Persistencia: al recargar página, el Select carga el último valor guardado
+  * Sin errores en consola
+
+Stage Summary:
+- Nueva funcionalidad: en Ajustes → General → sección POS, se puede elegir el almacén cuyos productos se mostrarán en el POS
+- Opción "Automático" (default): usa el primer almacén de tipo VENTAS, o el primero disponible
+- Opción específica: lista todos los almacenes activos con nombre, código y tipo
+- El cambio se aplica inmediatamente al volver al POS (sin necesidad de recargar)
+- Persiste en la base de datos (tabla Setting, key=pos_warehouse_id)

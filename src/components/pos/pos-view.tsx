@@ -88,14 +88,15 @@ interface WarehouseData {
   }
 }
 
-function parsePosTypeFromSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined): { posType: PosType; posTables: number } {
-  const result = { posType: 'kiosko' as PosType, posTables: 10 }
+function parsePosTypeFromSettings(settings: Record<string, { key: string; value: string; label: string }[]> | undefined): { posType: PosType; posTables: number; posWarehouseId: string } {
+  const result = { posType: 'kiosko' as PosType, posTables: 10, posWarehouseId: '' }
   if (!settings?.pos) return result
   for (const s of settings.pos) {
     try {
       const val = JSON.parse(s.value)
       if (s.key === 'pos_type') result.posType = val === 'cafeteria' ? 'cafeteria' : 'kiosko'
       if (s.key === 'pos_tables') result.posTables = typeof val === 'number' ? val : parseInt(val) || 10
+      if (s.key === 'pos_warehouse_id') result.posWarehouseId = typeof val === 'string' ? val : String(val || '')
     } catch {
       // ignore
     }
@@ -160,17 +161,26 @@ export function POSView() {
     },
   })
 
-  // Auto-select VENTAS warehouse on mount if none selected
+  // Select warehouse based on settings (pos_warehouse_id) with fallback to VENTAS type
   useEffect(() => {
-    if (!selectedWarehouseId && warehouses.length > 0) {
-      const ventasWarehouse = warehouses.find((w) => w.type === 'VENTAS')
-      if (ventasWarehouse) {
-        setSelectedWarehouseId(ventasWarehouse.id)
-      } else {
-        setSelectedWarehouseId(warehouses[0].id)
+    if (warehouses.length === 0) return
+    // If a specific warehouse is configured in settings, use it (and verify it still exists)
+    if (parsedPos.posWarehouseId) {
+      const configured = warehouses.find((w) => w.id === parsedPos.posWarehouseId)
+      if (configured) {
+        if (selectedWarehouseId !== configured.id) {
+          setSelectedWarehouseId(configured.id)
+        }
+        return
       }
     }
-  }, [warehouses, selectedWarehouseId, setSelectedWarehouseId])
+    // Fallback: auto-select VENTAS warehouse, else first available
+    const ventasWarehouse = warehouses.find((w) => w.type === 'VENTAS')
+    const fallbackId = ventasWarehouse?.id || warehouses[0].id
+    if (selectedWarehouseId !== fallbackId) {
+      setSelectedWarehouseId(fallbackId)
+    }
+  }, [warehouses, parsedPos.posWarehouseId, selectedWarehouseId, setSelectedWarehouseId])
 
   // Fetch current cash register
   const { data: cashRegister } = useQuery<CashRegisterData | null>({

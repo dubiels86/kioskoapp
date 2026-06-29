@@ -35,6 +35,7 @@ const DEFAULT_SETTINGS = [
   // POS Mode
   { key: 'pos_type', value: '"kiosko"', label: 'Tipo de POS', group: 'pos' },         // kiosko | cafetería
   { key: 'pos_tables', value: '10', label: 'Cantidad de Mesas', group: 'pos' },       // Número de mesas (solo cafetería)
+  { key: 'pos_warehouse_id', value: '""', label: 'Almacén para POS', group: 'pos' },  // ID del almacén cuyos productos se muestran en POS
 
   // Custom options (stored as JSON arrays)
   { key: 'custom_units', value: '[]', label: 'Unidades Personalizadas', group: 'custom_options' },
