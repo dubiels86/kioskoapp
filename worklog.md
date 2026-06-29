@@ -132,3 +132,33 @@ Stage Summary:
 - App verificada funcionando: POS, Inventario, Ajustes todos cargan correctamente
 - Keeper iniciado para mantener servidor activo
 - Nota: El servidor es inestable durante compilación de nuevas rutas, pero funciona bien una vez compiladas
+
+---
+Task ID: 6
+Agent: Main Agent
+Task: Monedas - dejar solo CUP y USD, con CUP por defecto
+
+Work Log:
+- Verificada la BD: ya solo tiene CUP (base, activa, rate=1) y USD (activa, rate=344)
+- Modificado src/components/settings/currency-tab.tsx:
+  * LOCALE_OPTIONS reducida de 15 países a solo 2: Cuba (CUP) y Estados Unidos (USD)
+  * Default de parseSettingsCurrency cambiado de ARS/$/es-AR a CUP/$MN/es-CU
+  * Placeholder del input "Código ISO" cambiado de "ARS" a "CUP"
+- Modificado src/lib/currency.ts:
+  * formatCurrency: simplificado switch de locales a una línea (USD -> en-US, demás -> es-CU)
+  * getCurrencyInfo: limpiado mapa de monedas de 10 entradas a solo 2 (CUP y USD)
+- Lint pasa limpio en los archivos modificados (los 4 errores restantes son pre-existentes en simple-payment-dialog.tsx)
+- Verificado con Agent Browser:
+  * Login exitoso como dubiel
+  * Pestaña Ajustes > Moneda cargada
+  * Dropdown "Formato Regional" ahora muestra solo: Cuba (es-CU) ($MN - CUP) y Estados Unidos (en-US) (US$ - USD)
+  * Seleccionado Cuba (CUP) y guardado
+  * Toast "Configuración de moneda guardada correctamente" apareció
+  * BD actualizada: currency_code=CUP, currency_symbol=$MN, currency_locale=es-CU
+  * Sin errores en consola
+
+Stage Summary:
+- Solo CUP y USD disponibles en el sistema (BD y UI)
+- CUP es la moneda base y la opción por defecto al abrir la pestaña Moneda
+- Configuración guardada en BD con CUP como moneda activa
+- Eliminadas todas las referencias a ARS, EUR, BRL, MXN, COP, CLP, PEN, UYU, etc. del código

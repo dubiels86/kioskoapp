@@ -62,31 +62,12 @@ export function convertPrice(price: number, fromCurrency: string, toCurrency: st
 // Function to format currency with symbol
 export function formatCurrency(amount: number, currencyCode: string = 'CUP'): string {
   try {
-    // Get appropriate locale based on currency
-    let locale = 'es-CU'
-    let currency = currencyCode
-    
-    // Set locale based on currency
-    switch (currencyCode) {
-      case 'USD':
-        locale = 'en-US'
-        break
-      case 'EUR':
-        locale = 'de-DE'
-        break
-      case 'BRL':
-        locale = 'pt-BR'
-        break
-      case 'ARS':
-        locale = 'es-AR'
-        break
-      default:
-        locale = 'es-CU'
-    }
+    // Only CUP and USD are supported
+    const locale = currencyCode === 'USD' ? 'en-US' : 'es-CU'
     
     return new Intl.NumberFormat(locale, { 
       style: 'currency', 
-      currency: currency 
+      currency: currencyCode 
     }).format(amount)
   } catch {
     // Fallback format
@@ -99,14 +80,6 @@ export function getCurrencyInfo(currencyCode: string): { symbol: string; name: s
   const currencies: Record<string, { symbol: string; name: string }> = {
     'CUP': { symbol: '$MN', name: 'Peso Cubano' },
     'USD': { symbol: 'US$', name: 'Dólar Estadounidense' },
-    'ARS': { symbol: '$', name: 'Peso Argentino' },
-    'EUR': { symbol: '€', name: 'Euro' },
-    'BRL': { symbol: 'R$', name: 'Real Brasileño' },
-    'MXN': { symbol: '$', name: 'Peso Mexicano' },
-    'COP': { symbol: '$', name: 'Peso Colombiano' },
-    'CLP': { symbol: '$', name: 'Peso Chileno' },
-    'PEN': { symbol: 'S/', name: 'Sol Peruano' },
-    'UYU': { symbol: '$U', name: 'Peso Uruguayo' },
   }
   
   return currencies[currencyCode] || { symbol: currencyCode, name: currencyCode }

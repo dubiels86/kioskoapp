@@ -14,25 +14,12 @@ import { Coins, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
 const LOCALE_OPTIONS = [
-  { value: 'es-AR', label: 'Argentina (es-AR)', symbol: '$', code: 'ARS' },
-  { value: 'es-MX', label: 'México (es-MX)', symbol: '$', code: 'MXN' },
-  { value: 'es-CO', label: 'Colombia (es-CO)', symbol: '$', code: 'COP' },
-  { value: 'es-CL', label: 'Chile (es-CL)', symbol: '$', code: 'CLP' },
-  { value: 'es-PE', label: 'Perú (es-PE)', symbol: 'S/', code: 'PEN' },
-  { value: 'es-UY', label: 'Uruguay (es-UY)', symbol: '$U', code: 'UYU' },
-  { value: 'es-EC', label: 'Ecuador (es-EC)', symbol: '$', code: 'USD' },
-  { value: 'es-VE', label: 'Venezuela (es-VE)', symbol: 'Bs.', code: 'VES' },
-  { value: 'es-BO', label: 'Bolivia (es-BO)', symbol: 'Bs', code: 'BOB' },
-  { value: 'es-PY', label: 'Paraguay (es-PY)', symbol: '₲', code: 'PYG' },
   { value: 'es-CU', label: 'Cuba (es-CU)', symbol: '$MN', code: 'CUP' },
-  { value: 'pt-BR', label: 'Brasil (pt-BR)', symbol: 'R$', code: 'BRL' },
-  { value: 'en-US', label: 'Estados Unidos (en-US)', symbol: '$', code: 'USD' },
-  { value: 'en-GB', label: 'Reino Unido (en-GB)', symbol: '£', code: 'GBP' },
-  { value: 'de-DE', label: 'Alemania (de-DE)', symbol: '€', code: 'EUR' },
+  { value: 'en-US', label: 'Estados Unidos (en-US)', symbol: 'US$', code: 'USD' },
 ]
 
 function parseSettingsCurrency(settings: Record<string, { key: string; value: string; label: string }[]> | undefined) {
-  const result = { code: 'ARS', symbol: '$', locale: 'es-AR', decimals: '2' }
+  const result = { code: 'CUP', symbol: '$MN', locale: 'es-CU', decimals: '2' }
   if (!settings?.currency) return result
   for (const s of settings.currency) {
     try {
@@ -191,7 +178,7 @@ export function CurrencyTab() {
                   id="code"
                   value={currencyCode}
                   onChange={(e) => setCurrencyCode(e.target.value.toUpperCase())}
-                  placeholder="ARS"
+                  placeholder="CUP"
                   maxLength={3}
                 />
               </div>
