@@ -239,3 +239,54 @@ Stage Summary:
 - Opción específica: lista todos los almacenes activos con nombre, código y tipo
 - El cambio se aplica inmediatamente al volver al POS (sin necesidad de recargar)
 - Persiste en la base de datos (tabla Setting, key=pos_warehouse_id)
+
+---
+Task ID: 9
+Agent: Main Agent
+Task: Al crear producto, poder poner en qué almacén se recibe el stock
+
+Work Log:
+- Revisada la estructura: ProductStock (producto-almacén) e InventoryMovement (con toWarehouseId) ya existen en schema
+- Frontend (src/components/inventory/product-form-dialog.tsx):
+  * Importado icono Warehouse de lucide-react
+  * Agregada interfaz WarehouseData y fetch de /api/warehouses con useQuery
+  * Agregado estado warehouseId (vacío = sin asignar)
+  * Agregado warehouseId al body del POST en handleSubmit
+  * Reset warehouseId a '' en useEffect (tanto al editar como al crear)
+  * Cambiada etiqueta "Stock" → "Stock inicial"
+  * Agregado Select "Almacén donde se recibe el stock" (solo al crear, no al editar):
+    - Opción "Sin asignar (solo stock global)" con valor especial __none__
+    - Lista dinámica de almacenes: "Nombre (CODE) — Tipo"
+    - Texto de ayuda contextual que cambia si hay stock ingresado
+- Backend (src/app/api/products/route.ts):
+  * Agregado warehouseId en destructuring del body
+  * Agregada validación: si warehouseId provisto, verifica que el almacén existe
+  * En la transacción, si warehouseId provisto y initialStock >= 0:
+    - Crea registro ProductStock con stock inicial y minStock
+  * En InventoryMovement:
+    - Agregado toWarehouseId (null si no hay almacén)
+    - Agregado costPrice y costCurrency del producto
+    - Reason diferenciado: "Stock inicial (recepción en almacén)" vs "Stock inicial"
+  * Cambiado default de costCurrency/saleCurrency de 'ARS' a 'CUP' (consistencia)
+- Lint pasa limpio en ambos archivos
+- Verificado con Agent Browser (login como dubiel):
+  * Inventario > Nuevo Producto: aparece nuevo Select "Almacén donde se recibe el stock"
+  * Dropdown muestra: Sin asignar, Almacén Principal (ALM-001), PDV (PDV)
+  * Caso 1: Crear "Producto Test PDV" con stock=50, almacén=PDV
+    - Toast "Producto creado correctamente"
+    - BD verificada: ProductStock creado para PDV con 50 unidades ✓
+    - Movement creado con toWarehouseId=PDV y reason="Stock inicial (recepción en almacén)" ✓
+  * Caso 2: Crear "Producto Sin Almacen" con stock=5, almacén=Sin asignar
+    - Toast "Producto creado correctamente"
+    - BD verificada: NO se creó ProductStock, solo stock global=5 ✓
+    - Movement creado con toWarehouseId=null y reason="Stock inicial" ✓
+  * Sin errores en consola
+- Productos de prueba eliminados de la BD para limpieza
+
+Stage Summary:
+- Al crear un producto, ahora se puede elegir en qué almacén se recibe el stock inicial
+- Opción "Sin asignar": solo actualiza stock global del producto (comportamiento anterior)
+- Opción específica de almacén: crea ProductStock + registra movement con toWarehouseId
+- El Select solo aparece al crear producto (no al editar, para evitar confusiones)
+- Validación backend: verifica que el almacén existe antes de crear
+- Transacción atómica: producto + ProductStock + InventoryMovement se crean juntos

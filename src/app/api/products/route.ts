@@ -99,6 +99,7 @@ export async function POST(request: Request) {
       costCurrency,
       saleCurrency,
       stock,
+      warehouseId,
       minStock,
       unit,
       image,
@@ -134,6 +135,17 @@ export async function POST(request: Request) {
       }
     }
 
+    // Validate warehouse exists if provided
+    if (warehouseId) {
+      const warehouse = await db.warehouse.findUnique({ where: { id: warehouseId } })
+      if (!warehouse) {
+        return NextResponse.json(
+          { error: 'El almacén especificado no existe' },
+          { status: 400 }
+        )
+      }
+    }
+
     const initialStock = stock ?? 0
 
     const product = await db.$transaction(async (tx) => {
@@ -145,8 +157,8 @@ export async function POST(request: Request) {
           categoryId: categoryId || null,
           costPrice: parseFloat(costPrice),
           salePrice: parseFloat(salePrice),
-          costCurrency: costCurrency || 'ARS',
-          saleCurrency: saleCurrency || 'ARS',
+          costCurrency: costCurrency || 'CUP',
+          saleCurrency: saleCurrency || 'CUP',
           image: image || null,
           stock: initialStock,
           minStock: minStock ?? 5,
@@ -170,6 +182,18 @@ export async function POST(request: Request) {
         },
       })
 
+      // If warehouseId is specified, create ProductStock entry with the initial stock
+      if (warehouseId && initialStock >= 0) {
+        await tx.productStock.create({
+          data: {
+            productId: newProduct.id,
+            warehouseId,
+            stock: initialStock,
+            minStock: minStock ?? 5,
+          },
+        })
+      }
+
       // Create initial inventory movement if stock > 0
       if (initialStock > 0) {
         await tx.inventoryMovement.create({
@@ -179,7 +203,10 @@ export async function POST(request: Request) {
             quantity: initialStock,
             previousStock: 0,
             newStock: initialStock,
-            reason: 'Stock inicial',
+            reason: warehouseId ? 'Stock inicial (recepción en almacén)' : 'Stock inicial',
+            toWarehouseId: warehouseId || null,
+            costPrice: parseFloat(costPrice),
+            costCurrency: costCurrency || 'CUP',
           },
         })
       }

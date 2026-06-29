@@ -14,13 +14,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CreatableSelect } from '@/components/ui/creatable-select'
-import { ImagePlus, X } from 'lucide-react'
+import { ImagePlus, X, Warehouse } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 interface Category {
   id: string
   name: string
+}
+
+interface WarehouseData {
+  id: string
+  name: string
+  code: string
+  type: string
 }
 
 interface Product {
@@ -58,6 +65,16 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const queryClient = useQueryClient()
   const isEditing = !!product
 
+  // Fetch warehouses for stock receiving
+  const { data: warehouses = [] } = useQuery<WarehouseData[]>({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const res = await fetch('/api/warehouses')
+      if (!res.ok) throw new Error('Error al obtener depósitos')
+      return res.json()
+    },
+  })
+
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: async () => {
@@ -86,6 +103,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
   const [saleCurrency, setSaleCurrency] = useState('CUP')
   const [stock, setStock] = useState('')
   const [minStock, setMinStock] = useState('')
+  const [warehouseId, setWarehouseId] = useState('')
   const [unit, setUnit] = useState('unidad')
   const [isPosProduct, setIsPosProduct] = useState(false)
   const [image, setImage] = useState<string | null>(null)
@@ -103,6 +121,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setSaleCurrency(product.saleCurrency || 'CUP')
       setStock(String(product.stock))
       setMinStock(String(product.minStock))
+      setWarehouseId('')
       setUnit(product.unit)
       setIsPosProduct(product.isPosProduct || false)
       setImage(product.image || null)
@@ -117,6 +136,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
       setSaleCurrency('CUP')
       setStock('')
       setMinStock('5')
+      setWarehouseId('')
       setUnit('unidad')
       setIsPosProduct(false)
       setImage(null)
@@ -181,6 +201,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
         costCurrency,
         saleCurrency,
         stock: stock ? parseInt(stock) : undefined,
+        warehouseId: warehouseId || undefined,
         minStock: minStock ? parseInt(minStock) : undefined,
         unit,
         isPosProduct,
@@ -408,7 +429,7 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="stock">Stock</Label>
+              <Label htmlFor="stock">Stock inicial</Label>
               <Input
                 id="stock"
                 type="number"
@@ -430,6 +451,34 @@ export function ProductFormDialog({ open, onOpenChange, product, categories }: P
               />
             </div>
           </div>
+
+          {/* Warehouse selector for initial stock - only when creating */}
+          {!isEditing && (
+            <div className="grid gap-2">
+              <Label htmlFor="warehouseId" className="flex items-center gap-1.5">
+                <Warehouse className="h-4 w-4" />
+                Almacén donde se recibe el stock
+              </Label>
+              <Select value={warehouseId || '__none__'} onValueChange={(v) => setWarehouseId(v === '__none__' ? '' : v)}>
+                <SelectTrigger id="warehouseId">
+                  <SelectValue placeholder="Sin asignar a ningún almacén" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin asignar (solo stock global)</SelectItem>
+                  {warehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name} ({w.code}) — {w.type === 'VENTAS' ? 'Ventas' : w.type === 'PRINCIPAL' ? 'Principal' : 'Secundario'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {stock && parseInt(stock) > 0
+                  ? `El stock inicial (${stock} ${unit}${parseInt(stock) !== 1 ? 'es' : ''}) se registrará como entrada en el almacén seleccionado.`
+                  : 'Si ingresás stock inicial, se registrará en este almacén.'}
+              </p>
+            </div>
+          )}
 
           <div className="grid gap-2">
             <div className="flex items-center space-x-2">
