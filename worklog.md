@@ -290,3 +290,24 @@ Stage Summary:
 - El Select solo aparece al crear producto (no al editar, para evitar confusiones)
 - Validación backend: verifica que el almacén existe antes de crear
 - Transacción atómica: producto + ProductStock + InventoryMovement se crean juntos
+
+---
+Task ID: 10
+Agent: Main Agent
+Task: Fix ChunkLoadError - Failed to load chunk from react-server-dom-turbopack
+
+Work Log:
+- Error reportado: Failed to load chunk /_next/static/chunks/node_modules_5d121271._.js (Turbopack)
+- Causa raíz: caché de Turbopack (.next) corrupta tras múltiples cambios en el código
+- Solución aplicada:
+  * Detenidos todos los procesos del servidor dev (PIDs 1118, 1121, 1156, 1223)
+  * Eliminada por completo la carpeta .next (caché corrupta de Turbopack)
+  * Reiniciado el servidor con `nohup bun run dev > dev.log 2>&1 &`
+- Verificación de estabilidad: el servidor respondió HTTP 200 consistentemente durante 30 segundos (10 checks cada 3s)
+- Log del servidor muestra compilación limpia sin errores
+- Nota: agent-browser consume muchos recursos y puede causar inestabilidad cuando se ejecuta junto con el servidor dev en este sandbox. La verificación se hizo con curl en lugar de agent-browser para confirmar estabilidad.
+
+Stage Summary:
+- ChunkLoadError resuelto eliminando la caché corrupta de Turbopack (.next)
+- Servidor dev reiniciado y estable respondiendo HTTP 200
+- El servidor está corriendo en background y listo para usar desde el Panel de Vista Previa
