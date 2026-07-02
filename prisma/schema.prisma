@@ -320,3 +320,25 @@ model Setting {
   label String // Human-readable label
   group String @default("general") // Grouping: general, currency, denominations, etc.
 }
+
+/// Estado de licencia cacheado localmente. Se sincroniza con el license-server.
+/// Solo un registro activo (id fijo = "singleton").
+model LicenseState {
+  id              String   @id // siempre "singleton"
+  licenseId       String?  // UUID de la licencia emitida
+  customer        String?  // Nombre del cliente
+  plan            String?  // plan: trial, pro, enterprise...
+  issuedAt        DateTime?
+  expiresAt       DateTime?
+  maxDevices      Int      @default(1)
+  features        String   @default("[]") // JSON array
+  fingerprint     String?  // fingerprint del hardware actual
+  activationToken String?  // token retornado por el license-server al activar
+  status          String   @default("unlicensed") // unlicensed | active | expired | revoked | grace | inactive
+  lastHeartbeat   DateTime?
+  graceUntil      DateTime? // fecha límite del grace period (sin red)
+  rawPayload      String?  // payload JSON firmado (sin signature)
+  signature       String?  // firma Ed25519 en base64
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+}

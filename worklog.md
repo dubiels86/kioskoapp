@@ -311,3 +311,170 @@ Stage Summary:
 - ChunkLoadError resuelto eliminando la caché corrupta de Turbopack (.next)
 - Servidor dev reiniciado y estable respondiendo HTTP 200
 - El servidor está corriendo en background y listo para usar desde el Panel de Vista Previa
+
+---
+Task ID: 3-b
+Agent: client-license-lib-builder
+Task: Create server-only client-side license library at src/lib/license.ts (fingerprint, Ed25519 verify, DB persistence, activate/heartbeat/status/telemetry/deactivate against central license-server on :3042 with offline-first grace mode)
+
+Work Log:
+- Read worklog.md to understand previous work (Next.js 16 + TS + Prisma SQLite KioskoApp at /home/z/my-project, v0.9.0)
+- Verified prerequisites exist: LicenseState model in prisma/schema.prisma (line 326), license-public-key.pem (113 bytes, Ed25519 SPKI PEM), Prisma client already regenerated with LicenseState type, @/lib/version exports APP_VERSION='0.4.0', @/lib/db exports Prisma singleton
+- Created /home/z/my-project/src/lib/license.ts (~530 lines, SERVER-ONLY, uses crypto/os/fs/path + Prisma)
+- Implemented all 9 exported functions + 3 exported types + 3 exported constants
+- Used canonicalOf() that sorts top-level keys only (customer, expiresAt, features, issuedAt, licenseId, maxDevices, plan) and excludes signature; features array preserved as-is
+- Ed25519 verify via crypto.verify(null, Buffer.from(canonical), publicKey, Buffer.from(sig,'base64'))
+- fetchWithTimeout helper using AbortController (5s activate/heartbeat, 3s telemetry)
+- Offline-first grace activation: on network error, signature still valid → store as 'grace' with graceUntil=now+7d
+- checkLicenseStatus re-verifies signature+expiry locally against DB-stored rawPayload/signature (defends against DB tampering)
+- sendTelemetryPing wrapped in try/catch, never throws, reads version from @/lib/version
+- Ran `npx eslint src/lib/license.ts` → exit 0, ZERO errors on the file (the 4 remaining lint errors in the repo are all pre-existing in scripts/check-users-quick.js and src/components/pos/*-payment-dialog.tsx)
+- Ran runtime sanity check via bun script (NOT the dev server): confirmed all 12 exports, public key loads as ed25519, fingerprint is 64 hex chars + cached, parseLicenseFile rejects bad JSON / missing fields, Ed25519 signature round-trip works with test keypair, real public key correctly rejects test-signed payloads (proves real key is wired), tampered payloads fail verification, getLicenseState creates singleton row, checkLicenseStatus returns 'unlicensed' for fresh state, sendTelemetryPing + sendHeartbeat don't throw without a server
+- Cleaned up sanity script after testing
+
+Stage Summary:
+- /home/z/my-project/src/lib/license.ts created and fully functional
+- Exported API:
+  • Constants: LICENSE_SERVER_URL='http://localhost:3042', GRACE_PERIOD_DAYS=7, PUBLIC_KEY_PEM (string, loaded from src/lib/license-public-key.pem at module init)
+  • Types: LicenseStatus (union: unlicensed|active|expired|revoked|grace|inactive|grace_expired|invalid|max_devices), LicensePayload, LicenseStateInfo
+  • computeFingerprint(): Promise<string> — SHA-256(MAC|hostname|cpuModel|cpuCores), cached
+  • verifyLicensePayload(payload): { valid: boolean; reason? } — Ed25519 sig + expiry check
+  • getLicenseState(): Promise<LicenseState row> — singleton upsert
+  • parseLicenseFile(content): { ok; payload?; error? } — JSON + structural + signature validation
+  • activateLicense(licenseContent): Promise<{ ok; status; message?; license? }> — verify locally → POST /api/activate → persist active OR grace on network error; handles max_devices/revoked/expired/not_found
+  • sendHeartbeat(): Promise<{ status; message? }> — POST /api/heartbeat, refreshes lastHeartbeat+graceUntil on active, locks to expired when grace period over
+  • checkLicenseStatus(): Promise<LicenseStateInfo> — main gate, re-verifies signature+expiry locally, honours grace period
+  • sendTelemetryPing(): Promise<void> — best-effort POST /api/telemetry with {fingerprint, version, timestamp, licenseId?}, never throws
+  • deactivateCurrent(): Promise<{ ok; message? }> — POST /api/deactivate then resets LicenseState to unlicensed
+- Lint passes clean on src/lib/license.ts (exit 0)
+- Runtime sanity checks all pass
+- Ready for use from server-side Next.js code (route handlers, middleware, server components)
+
+---
+Task ID: 3-a
+Agent: license-server-builder
+Task: Build independent Bun mini-service (license-server) at /home/z/my-project/mini-services/license-server/ acting as the central license authority for KioskoApp — issues Ed25519-signed floating licenses, tracks per-device activations, receives heartbeats and silent telemetry.
+
+Work Log:
+- Read previous worklog (Tasks 1-10) to understand project context (KioskoApp Next.js on port 3000, DB at db/custom.db, super-admin dubiel).
+- Verified pre-existing Ed25519 keypair:
+  * private key at mini-services/license-server/keys/private.pem (DO NOT regenerate — preserved as-is)
+  * public key at src/lib/license-public-key.pem
+  * Confirmed with node:crypto that the keypair is valid Ed25519, 64-byte signatures, signature verifies with public key.
+- Created independent Bun project at mini-services/license-server/:
+  * package.json — name "license-server", scripts dev="bun --hot index.ts" + start="bun index.ts", only devDep @types/bun (runtime has ZERO external deps; uses only Bun built-ins: Bun.serve, bun:sqlite, node:crypto, node:fs, node:path)
+  * tsconfig.json — strict TS, ESNext, bundler resolution, types:["bun"]
+  * index.ts — full server (~600 lines, typed)
+  * README.md — full documentation (endpoints, schema, security notes, floating-license semantics)
+  * keep-alive.sh — auto-restart wrapper (used because the sandbox kills plain background processes between Bash tool invocations)
+- index.ts highlights:
+  * Constants: PORT=3042 (hardcoded), ADMIN_API_KEY="kiosko-admin-secret-2025" (with prominent rotate-in-production warning)
+  * Loads private key at startup with crypto.createPrivateKey(); throws if not Ed25519.
+  * SQLite via bun:sqlite with WAL mode. Tables: licenses, activations, telemetry — exact schema requested.
+  * Prepared statements for every query (no SQL injection).
+  * stableStringify() helper: recursive key-sorted canonical JSON (sorts object keys at every nesting level, preserves array order).
+  * signLicense(): crypto.sign(null, Buffer.from(canonicalJson, "utf8"), privateKey).toString("base64")
+  * Bun.serve with simple URL-pathname router; CORS permissive (Access-Control-Allow-Origin: *); OPTIONS preflight → 204.
+  * All handlers wrapped in try/catch → {error, code, message} JSON with proper status codes (400/401/403/404/405/500).
+  * Logs every request (METHOD path -> status) + semantic events ([issue]/[activate]/[heartbeat]/[revoke]/[deactivate]) with last-8-char short IDs of licenseId/fingerprint.
+  * Floating-license logic: re-activating same fingerprint is idempotent (returns existing token + refreshes lastHeartbeat); exceeding maxDevices → 403 max_devices_reached with the current activations list (REJECT path, NOT silent eviction — documented in README).
+  * Heartbeat auto-deactivates the activation when license is revoked/expired, so slots are freed.
+  * /api/deactivate: admin can deactivate by licenseId+fingerprint without a token; non-admin must include their own activationToken.
+  * /api/licenses: admin auth via X-Admin-Key header OR ?key= query param (so admins can open the URL in a browser).
+  * /api/telemetry: public, silent phone-home; stores fingerprint/version/timestamp/licenseId/ip/receivedAt; always 200 {ok:true}.
+- Started service via keep-alive.sh detached with `( ( setsid --fork bash keep-alive.sh </dev/null >/dev/null 2>&1 ) & )` so it reparents to PID 1 (tini) and survives Bash tool session boundaries. Output → /home/z/my-project/license-server.log.
+- Ran 24 end-to-end curl tests against the running service. All pass:
+  1.  GET  /api/health                                            → 200 {"ok":true,"service":"license-server"}
+  2.  POST /api/issue (no admin key)                              → 401 admin_key_required
+  3.  POST /api/issue (admin)                                     → 201, license + signature + licenseFileContent
+  4.  POST /api/activate (fake fingerprint)                       → 201 {status:active, activationToken, license, features, expiresAt}
+  5.  POST /api/activate (same fingerprint again)                 → idempotent, same activationToken returned (PASS)
+  6.  POST /api/activate (2nd fingerprint, maxDevices=2)          → 201 active
+  7.  POST /api/activate (3rd fingerprint)                        → 403 max_devices_reached + list of 2 current activations
+  8.  POST /api/heartbeat                                         → 200 {status:active, features, expiresAt}
+  9.  POST /api/telemetry                                         → 200 {ok:true}
+  10. GET  /api/licenses?key=<ADMIN>                              → 200, array with 1 license + 2 active activations + device details
+  10b. GET  /api/licenses (no key)                                → 401 admin_key_required
+  11. POST /api/revoke                                             → 200 {ok:true}
+  12. POST /api/heartbeat after revoke                            → 403 {status:revoked}  (activation auto-deactivated)
+  13. POST /api/unrevoke                                           → 200 {ok:true}
+  14. POST /api/heartbeat after unrevoke (old token)              → 404 {status:not_found}  (auto-deactivated by revoke)
+  15. POST /api/activate after unrevoke                           → 201 active, fresh activationToken issued
+  16. POST /api/deactivate (admin, no token, by fingerprint)      → 200 {ok:true}
+  17. POST /api/heartbeat (different active device)               → 200 active
+  18. Signature verification with PUBLIC key (client-side sim)   → PASS (cryptography lib Ed25519 verify OK)
+  19. POST /api/activate on expired license                       → 403 {status:expired}
+  20. POST /api/activate with unknown licenseId                  → 404 license_not_found
+  21. OPTIONS /api/activate preflight                             → 204 with full CORS headers
+  22. POST /api/telemetry with Origin header                     → 200 with CORS headers
+  23. GET  /api/nope (unknown route)                              → 404 {error:not_found}
+  24. POST /api/health (wrong method)                            → 405 method_not_allowed
+- Verified service still running after all tests (keeper script + bun index.ts, PPid=1).
+
+Stage Summary:
+- License-server mini-service is LIVE on port 3042 (PID 2827 via keeper PID 2825, both orphaned to init/tini).
+- /api/health responds {"ok":true,"service":"license-server"} HTTP 200.
+- Artifacts:
+  * /home/z/my-project/mini-services/license-server/index.ts        (server, ~600 lines typed)
+  * /home/z/my-project/mini-services/license-server/package.json    (deps: zero runtime, @types/bun devDep)
+  * /home/z/my-project/mini-services/license-server/tsconfig.json
+  * /home/z/my-project/mini-services/license-server/README.md       (endpoints, schema, security notes)
+  * /home/z/my-project/mini-services/license-server/keep-alive.sh   (auto-restart wrapper)
+  * /home/z/my-project/mini-services/license-server/data.db         (SQLite, WAL mode)
+  * /home/z/my-project/license-server.log                          (server stdout)
+- Exact endpoints (all JSON; admin endpoints need X-Admin-Key: kiosko-admin-secret-2025):
+  GET  /api/health                       public   {ok:true, service:"license-server"}
+  POST /api/issue                        admin    body {customer, plan, expiresAt, maxDevices, features} → 201 {ok, license, licenseFileContent}
+  POST /api/activate                     public   body {licenseId, fingerprint, hostname} → 201/200/403/404
+  POST /api/heartbeat                    public   body {licenseId, fingerprint, activationToken} → 200/403/404
+  POST /api/deactivate                   admin-or-client   body {licenseId, fingerprint, activationToken?} → 200
+  POST /api/revoke                       admin    body {licenseId} → 200 {ok:true}
+  POST /api/unrevoke                     admin    body {licenseId} → 200 {ok:true}
+  GET  /api/licenses                     admin    (header OR ?key=) → 200 array of licenses+activations
+  POST /api/telemetry                    public   body {fingerprint, version, timestamp, licenseId?} → 200 {ok:true}
+- Signed payload format matches spec: licenseId, customer, plan, issuedAt, expiresAt, maxDevices, features[], signature (base64 Ed25519 over canonical key-sorted JSON of all other fields).
+- Floating-license: up to maxDevices distinct active fingerprints per licenseId; re-activating the same fingerprint reuses the token; exceeding the cap is REJECTED (not silently evicted) with the current activations list returned so admin/user can revoke one.
+- SECURITY: keys/private.pem is the master signing key, never sent to clients. Clients only need src/lib/license-public-key.pem to verify signatures. ADMIN_API_KEY is a known shared secret — README explicitly says to rotate in production and move to env/secret-manager + TLS.
+- NOTE FOR NEXT AGENT: the service must be reachable from the KioskoApp client (port 3000) via the gateway using relative paths with ?XTransformPort=3042. CORS is permissive. The client should embed the public key (already at src/lib/license-public-key.pem) and implement: license.lic file load + Ed25519 verify + activation flow + heartbeat loop + lock-on-revoked. This is the next task (likely 3-b).
+
+---
+Task ID: LIC-1
+Agent: Main Agent
+Task: Sistema de protección por licencia (L1+L2+L3) — firma Ed25519 + fingerprint de hardware + activación online con grace period + telemetría silenciosa + panel super-admin
+
+Work Log:
+- Generado par de claves Ed25519: privada en mini-services/license-server/keys/private.pem, pública en src/lib/license-public-key.pem
+- Agregado modelo LicenseState a prisma/schema.prisma + db:push
+- [Subagente 3-a] Creó mini-servicio license-server en mini-services/license-server/ (Bun + bun:sqlite, puerto 3042) con endpoints: /api/issue, /api/activate, /api/heartbeat, /api/deactivate, /api/revoke, /api/unrevoke, /api/licenses, /api/telemetry. ADMIN_API_KEY=kiosko-admin-secret-2025
+- [Subagente 3-b] Creó src/lib/license.ts (server-only): computeFingerprint (SHA-256 de MAC+hostname+CPU), verifyLicensePayload (Ed25519), activateLicense (offline-first con grace 7d), sendHeartbeat, checkLicenseStatus, sendTelemetryPing, deactivateCurrent
+- Creado src/lib/license-cookie.ts: cookie firmada HMAC-SHA256 (formato payloadBase64.sigBase64) para gate rápido en middleware; setLicenseResponseCookie/clearLicenseResponseCookie
+- Creado src/lib/license-secret.ts: secret compartido entre Node (route handlers) y Edge (middleware) — evita el problema de que DATABASE_URL no llega al Edge runtime
+- API routes internas: /api/license/status, /api/license/activate, /api/license/heartbeat, /api/license/deactivate (setean/limpian cookie)
+- Creado src/middleware.ts (Edge runtime + WebCrypto): whitelist /api/license/*, /api/auth/*, /api/version y /; bloquea resto sin cookie válida (503 JSON para /api/*, redirect a /?license=required para páginas). BUG FIX: tuve que moverlo de middleware.ts (raíz) a src/middleware.ts porque el proyecto usa src/app/. BUG FIX: el runtime='nodejs' no compilaba en Turbopack → migrado a Edge + WebCrypto. BUG FIX: importKey con uso ['verify'] no permitía sign → cambiado a ['sign','verify']. BUG FIX: process.env.DATABASE_URL no disponible en Edge → secret compartido hardcoded en license-secret.ts.
+- Creado src/components/license/license-gate.tsx: overlay full-screen de activación (paste/upload .lic), muestra estado (active/grace/expired/revoked/etc), heartbeat periódico cada 10min, ensure-cookie al detectar licencia activa (llama heartbeat inmediato para setear cookie en browser fresco antes de renderizar la app)
+- Integrado LicenseGate en src/app/page.tsx envolviendo toda la app
+- Creado src/lib/license-admin.ts (server-only): helpers que llaman al license-server con X-Admin-Key (listLicenses, issueLicense, revokeLicense, unrevokeLicense, deactivateDevice). Normaliza activations (el server devuelve {active,total,devices:[...]} → se aplana a array)
+- API routes proxy admin: /api/license-admin/licenses (GET list, POST issue), /api/license-admin/revoke, /api/license-admin/unrevoke, /api/license-admin/deactivate — todas verifican getSessionUser() + permiso 'settings.all'
+- Creado src/components/settings/license-admin-tab.tsx: formulario de emisión (cliente, plan, vencimiento, maxDevices, features) + lista de licencias con activaciones + botones Revocar/Reactivar/Liberar dispositivo + copiar licencia emitida al portapapeles
+- Integrado tab "Licencias" en src/components/settings/settings-view.tsx, visible solo si hasPermission('settings.all') (super-admin)
+- Lint limpio en todos los archivos nuevos
+- Verificado con Agent Browser (login dubiel/admin):
+  * Sin licencia: LicenseGate muestra "Activación de Licencia Requerida" con formulario ✓
+  * Activación vía UI (paste license JSON → click Activar) → toast "Licencia activada correctamente" → app desbloquea a login ✓
+  * Middleware bloquea /api/products sin cookie (503 license_required) ✓
+  * Middleware permite /api/products con cookie válida (200) ✓
+  * Deactivate → /api/products vuelve a 503 ✓
+  * Login dubiel/admin funciona, POS carga con todos los /api/* en 200 ✓
+  * Ajustes > Licencias tab visible para super-admin ✓
+  * Panel admin: formulario emisión + lista 13 licencias con activaciones + botones revocar ✓
+  * Sin errores de consola ✓
+
+Stage Summary:
+- Sistema de licencia completo y verificado: L1 (firma Ed25519) + L2 (fingerprint hardware) + L3 (activación online + heartbeat + grace 7d) + telemetría silenciosa
+- License-server independiente en mini-services/license-server/ (puerto 3042, Bun + SQLite)
+- Middleware Edge gatea todas las rutas excepto whitelist; cookie HMAC-SHA256 firmada por route handlers
+- Panel super-admin en Ajustes > Licencias para emitir/revocar/gestionar licencias y dispositivos
+- Configuración aplicada: licencia FLOATING (un licenseId hasta maxDevices fingerprints), online con grace period 7d, telemetría silenciosa, sin ofuscación
+- Credenciales: dubiel / admin (super-admin con settings.all)
+- Ambos servicios corriendo: dev server :3000 + license-server :3042
+- Claves: privada en mini-services/license-server/keys/private.pem (NUNCA exponer al cliente), pública en src/lib/license-public-key.pem

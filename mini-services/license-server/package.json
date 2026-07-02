@@ -1,0 +1,14 @@
+{
+  "name": "license-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Central license authority for KioskoApp — issues, activates and validates Ed25519-signed floating licenses.",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

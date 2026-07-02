@@ -1,18 +1,20 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Users, Shield, Coins, Banknote, Settings as SettingsIcon, Store, DatabaseBackup } from 'lucide-react'
+import { Users, Shield, Coins, Banknote, Settings as SettingsIcon, Store, DatabaseBackup, KeyRound } from 'lucide-react'
 import { UsersTab } from './users-tab'
 import { RolesTab } from './roles-tab'
 import { CurrencyTab } from './currency-tab'
 import { DenominationsTab } from './denominations-tab'
 import { GeneralTab } from './general-tab'
 import { BackupsTab } from './backups-tab'
+import { LicenseAdminTab } from './license-admin-tab'
+import { useAppStore } from '@/lib/store'
 
 export function SettingsView() {
+  const hasPermission = useAppStore((s) => s.hasPermission)
+  const isSuperAdmin = hasPermission('settings.all')
+
   return (
     <div className="space-y-4">
       <Tabs defaultValue="users" className="w-full">
@@ -41,6 +43,12 @@ export function SettingsView() {
             <DatabaseBackup className="h-4 w-4" />
             Respaldos
           </TabsTrigger>
+          {isSuperAdmin && (
+            <TabsTrigger value="licenses" className="gap-1.5">
+              <KeyRound className="h-4 w-4" />
+              Licencias
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="users" className="mt-4">
@@ -66,6 +74,12 @@ export function SettingsView() {
         <TabsContent value="backups" className="mt-4">
           <BackupsTab />
         </TabsContent>
+
+        {isSuperAdmin && (
+          <TabsContent value="licenses" className="mt-4">
+            <LicenseAdminTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

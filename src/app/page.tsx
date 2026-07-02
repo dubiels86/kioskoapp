@@ -13,6 +13,7 @@ import { RepairsView } from '@/components/repairs/repairs-view'
 import { ReportsView } from '@/components/reports/reports-view'
 import { SettingsView } from '@/components/settings/settings-view'
 import { LoginView } from '@/components/auth/login-view'
+import { LicenseGate } from '@/components/license/license-gate'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { AppView } from '@/lib/types'
 import type { AuthUser } from '@/lib/store'
@@ -67,9 +68,13 @@ export default function Home() {
     checkSession()
   }, [setUser])
 
+  // The license gate wraps everything. If there is no valid license, it shows
+  // the activation screen instead of the children below.
+  let inner: React.ReactNode
+
   // Loading state while checking session
   if (isLoadingAuth) {
-    return (
+    inner = (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
@@ -77,53 +82,52 @@ export default function Home() {
         </div>
       </div>
     )
-  }
+  } else if (!isAuthenticated) {
+    // Not authenticated - show login
+    inner = <LoginView />
+  } else {
+    // Authenticated - show main app
+    const ActiveComponent = MODULE_COMPONENTS[activeView]
+    inner = (
+      <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-1">
+          {/* Desktop Sidebar */}
+          <aside className="hidden md:flex shrink-0 sticky top-0 h-screen">
+            <AppSidebar />
+          </aside>
 
-  // Not authenticated - show login
-  if (!isAuthenticated) {
-    return <LoginView />
-  }
+          {/* Main Content Area */}
+          <div className="flex flex-col flex-1 min-w-0">
+            {/* Mobile Header */}
+            <AppHeader />
 
-  // Authenticated - show main app
-  const ActiveComponent = MODULE_COMPONENTS[activeView]
+            {/* Desktop Title Bar */}
+            <div className="hidden md:flex items-center h-14 px-6 border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
+              <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
+                {VIEW_LABELS[activeView]}
+              </h1>
+            </div>
 
-  return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
-      <div className="flex flex-1">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex shrink-0 sticky top-0 h-screen">
-          <AppSidebar />
-        </aside>
-
-        {/* Main Content Area */}
-        <div className="flex flex-col flex-1 min-w-0">
-          {/* Mobile Header */}
-          <AppHeader />
-
-          {/* Desktop Title Bar */}
-          <div className="hidden md:flex items-center h-14 px-6 border-b bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
-            <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-              {VIEW_LABELS[activeView]}
-            </h1>
+            {/* Module Content */}
+            <main className="flex-1 overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeView}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className={activeView === 'pos' ? 'h-full' : 'h-full overflow-y-auto p-4 md:p-6'}
+                >
+                  <ActiveComponent />
+                </motion.div>
+              </AnimatePresence>
+            </main>
           </div>
-
-          {/* Module Content */}
-          <main className="flex-1 overflow-hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeView}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2, ease: 'easeInOut' }}
-                className={activeView === 'pos' ? 'h-full' : 'h-full overflow-y-auto p-4 md:p-6'}
-              >
-                <ActiveComponent />
-              </motion.div>
-            </AnimatePresence>
-          </main>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return <LicenseGate>{inner}</LicenseGate>
 }
