@@ -93,7 +93,7 @@ async function verifyCookieValue(value: string | undefined | null): Promise<{ ok
   }
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 1. Always-allowed paths
