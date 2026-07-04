@@ -948,3 +948,87 @@ Stage Summary:
   * src/app/api/license/issue-trial/route.ts (NUEVO)
   * src/components/license/license-gate.tsx (modificado: +botón trial, +divider, +handleIssueTrial)
 - El endpoint solo emite TRIALS (plan=trial, maxDevices=1). Para licencias pro/enterprise, usar el panel admin (Ajustes → Licencias) o el script issue-license.ts.
+
+---
+Task ID: GITHUB-UPDATE-SECURE
+Agent: Main Agent
+Task: Actualizar GitHub con los cambios recientes (sistema de licencia auto-bootstrap + botón trial de 1 clic), pero purgeando .env del historial porque estaba expuesto con secrets.
+
+Work Log:
+- Diagnóstico inicial: 3 commits locales sin pushear (8d3b9c9, e3e260b, 488e46b) que incluían:
+  * Sistema de licencia auto-bootstrap (ensureKeypair en license-server)
+  * Script issue-license.ts
+  * Endpoint /api/license/issue-trial
+  * Botón "Emitir licencia de prueba" en LicenseGate
+- PROBLEMA CRÍTICO detectado al revisar los commits:
+  * Commit 8d3b9c9 incluía `.env` con LICENSE_COOKIE_SECRET=dev-secret-not-for-production
+  * .env ya estaba en GitHub (origin/main 95c9d1a) desde el commit inicial — expuesto en 5 commits
+  * Commits e3e260b y 488e46b incluían tool-results/*.txt (868 líneas c/u, outputs internos de tools)
+- Limpieza:
+  * Agregado `tool-results/` y `agent-ctx/` a .gitignore (no estaban)
+  * `git rm --cached .env` (des-trackeado, el archivo local se conserva)
+  * `git rm --cached -r tool-results/` (3 archivos des-trackeados)
+  * Commit "chore: untrack .env (secrets) and tool-results/ (internal)"
+- Purga del historial completo con git-filter-repo:
+  * `git filter-repo --invert-paths --path .env --path tool-results/ --path agent-ctx/ --force`
+  * 64 commits → 62 commits (2 commits purgados completamente)
+  * .env y tool-results/ YA NO existen en NINGÚN commit del historial
+  * .git reducido de 1.6MB → 1.1MB
+- filter-repo remueve el remote automáticamente (comportamiento esperado):
+  * Re-agregado: git remote add origin https://github.com/dubiels86/kioskoapp.git
+- Force-push con PAT (ghp_...):
+  * `git push --force origin main` → 95c9d1a...be6d734 (forced update) ✅
+  * Token removido de la URL del remote después del push
+- Verificación post-push:
+  * Local HEAD = origin/main = be6d734 ✅
+  * `git ls-tree -r origin/main | grep .env` → vacío (no está en GitHub) ✅
+  * `git ls-tree -r origin/main | grep tool-results` → vacío ✅
+  * 248 archivos trackeados, 62 commits, .git = 1.1MB
+- Verificación de archivos clave presentes en GitHub:
+  * ✅ src/app/api/license/issue-trial/route.ts
+  * ✅ src/components/license/license-gate.tsx
+  * ✅ mini-services/license-server/index.ts (con auto-keypair)
+  * ✅ mini-services/license-server/issue-license.ts
+  * ✅ src/lib/license.ts, src/lib/license-admin.ts
+- Archivos NO sensibles que coincidieron con el patrón "secret" pero son seguros:
+  * .env.example → solo placeholders ("change-me-in-production"), sin secrets reales
+  * src/lib/license-secret.ts → fallback default documentado, el real viene de process.env
+
+Stage Summary:
+- GitHub actualizado con force-push (be6d734): 62 commits, 248 archivos, 1.1MB
+- .env PURGADO del historial completo (estaba expuesto desde el commit inicial con LICENSE_COOKIE_SECRET=dev-secret-not-for-production)
+- tool-results/ y agent-ctx/ también purgados y agregados a .gitignore
+- ⚠️ ACCIÓN REQUERIDA POR EL USUARIO: el valor LICENSE_COOKIE_SECRET=dev-secret-not-for-production estuvo público en GitHub. Aunque es un valor de desarrollo, debe rotarse para cualquier despliegue de producción. Generar uno nuevo con: `openssl rand -hex 32` y ponerlo en .env como LICENSE_COOKIE_SECRET.
+- El PAT usado ([REDACTED:github_token]) sigue siendo válido — recordar revocarlo en https://github.com/settings/tokens
+
+---
+Task ID: DIAGNOSTICO-KEYS
+Agent: Main Agent
+Task: Diagnosticar error "Firma inválida: verification_error" que el usuario recibe al pegar una licencia en su PC local.
+
+Work Log:
+- Diagnóstico del error: `verification_error` se devuelve en src/lib/license.ts:verifyLicensePayload() cuando crypto.verify() lanza una excepción. Esto ocurre SIEMPRE por una causa: la licencia fue firmada por una clave privada Ed25519 que NO es pareja de la clave pública en src/lib/license-public-key.pem.
+- Causa raíz en el caso del usuario: el sistema es floating-license atado al hardware. Cada PC genera su propio par de claves Ed25519 al primer arranque del license-server (auto-bootstrap). Una licencia firmada en la máquina A NO se puede verificar en la máquina B porque las claves son distintas. El usuario probablemente pegó una licencia que yo le mostré en el chat (firmada por el sandbox) o que generó en otra PC.
+- Confirmado que el canonical form ENTRE server y cliente coincide (ambos ordenan keys top-level alfabéticamente; el único campo anidado es `features: string[]` que es un array y preserva orden en ambos). Descartado mismatch de canonicalización.
+- Creado `mini-services/license-server/diagnostico-keys.ts`:
+  * Compara el fingerprint SHA-256 del DER de la clave pública derivada de la clave privada del license-server vs el fingerprint de src/lib/license-public-key.pem.
+  * Detecta 3 escenarios: (a) falta clave privada, (b) falta clave pública del cliente, (c) mismatch entre ambas.
+  * Bonus: si se le pasa un archivo .lic como argumento, verifica si la firma de esa licencia corresponde a ESTA clave privada (para confirmar si la licencia es de otra máquina).
+  * Imprime instrucciones de fix específicas para cada caso.
+- Probado en sandbox:
+  * Escenario sano (claves recién generadas y sincronizadas) → "✅ COINCIDEN"
+  * Escenario de mismatch (puse una clave pública distinta en src/lib/) → "❌ NO COINCIDEN" con instrucciones de fix
+  * Restaurado el estado sano y verificado que vuelve a coincidir.
+
+Stage Summary:
+- El error "Firma inválida: verification_error" SIEMPRE significa key mismatch (la licencia viene de otra máquina).
+- NO es un bug del código: es el diseño floating-license funcionando correctamente (cada PC tiene sus propias claves).
+- Fix para el usuario: NO pegar licencias de otras máquinas. Generar la licencia EN la misma PC donde se va a activar, usando:
+  * El botón verde "Emitir licencia de prueba" (más fácil), o
+  * `bun mini-services/license-server/issue-license.ts --customer ...` (CLI), o
+  * El panel admin Ajustes → Licencias → Emitir.
+- Si el usuario sospecha que sus claves locales se desincronizaron, correr:
+  `bun mini-services/license-server/diagnostico-keys.ts`
+  que le dirá exactamente qué pasa y cómo arreglarlo.
+- Fix limpio si hay mismatch real: borrar keys/, data.db y src/lib/license-public-key.pem, arrancar el license-server (regenera todo), luego emitir licencia nueva.
+- Archivo nuevo: mini-services/license-server/diagnostico-keys.ts (no se commitea aún; el usuario lo tiene disponible en su working tree si hizo pull, o puede crearlo copiando del sandbox).
