@@ -80,3 +80,7 @@ skills/
 db/custom.db
 db/custom.db-shm
 db/custom.db-wal
+
+# Tool results and agent context (internal, never commit)
+tool-results/
+agent-ctx/
