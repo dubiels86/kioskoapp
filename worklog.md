@@ -1069,3 +1069,49 @@ Stage Summary:
 - Errores de consola: solo 2x 401 de /api/auth/session para usuario anónimo (esperado y documentado). Sin page_errors ni request_failures.
 - Artefactos guardados en /home/z/verify-admin-trial/: 01_anonymous.png, 02_logged_in.png, 03_after_activation.png, console.log, page_errors.log (vacío), request_failures.log (vacío), result.json, verify.py, run.sh, orchestrator.log, license-server.log, nextjs.log.
 - No se modificó ningún código (verificación only).
+
+---
+Task ID: ADMIN-ONLY-TRIAL
+Agent: Main Agent
+Task: Restringir la activación de licencia trial a super admin (el usuario pidió "solo activar la licencia desde la app corriendo con rol de super admin").
+
+Work Log:
+- Diagnóstico: el botón verde "Emitir licencia de prueba" era público (cualquiera podía emitirse una licencia trial). Esto era un riesgo de seguridad — cualquier persona con acceso a la URL podría autoemitirse una licencia.
+- Implementación backend (src/app/api/license/issue-trial/route.ts):
+  * Agregado import de getSessionUser desde @/lib/auth.
+  * Al inicio del handler POST: verifica sesión autenticada + permiso 'settings.all'.
+  * Sin sesión → 401 {"status":"unauthorized","message":"Debe iniciar sesión como super administrador..."}.
+  * Logueado sin permiso → 403 {"status":"forbidden","message":"Solo un super administrador puede emitir..."}.
+  * Solo si es super admin continúa el flujo issue+activate.
+- Implementación frontend (src/components/license/license-gate.tsx):
+  * Agregado estado authUser + authChecked + isSuperAdmin (permission 'settings.all').
+  * useEffect que llama GET /api/auth/session para detectar sesión existente.
+  * La caja verde con el botón trial solo se renderiza si isSuperAdmin.
+  * Si NO es super admin, muestra aviso "Activación rápida restringida" con icono ShieldAlert.
+  * Agregado formulario de login embebido (campos #lic-login-user, #lic-login-pass) que aparece al clic en "Iniciar sesión como super admin" — permite autenticarse SIN salir de la pantalla de activación.
+  * Después del login exitoso, authUser se setea y el botón trial aparece con "Conectado como <nombre>".
+  * La opción de pegar licencia JSON existente sigue disponible para todos.
+- Verificación E2E con curl:
+  * issue-trial sin login → 401 unauthorized ✅
+  * login dubiel/admin → 200, rol "Super Administrador", permissions incluye settings.all ✅
+  * issue-trial con cookie dubiel → 200 ok, licencia trial 30 días activada ✅
+  * status después → "active" con licenseId y customer "Trial <hostname>" ✅
+- Verificación E2E con Playwright (subagente VERIFY-ADMIN-TRIAL):
+  * Pantalla anónima: botón trial NO visible (count=0), aviso "Activación rápida restringida" visible, botón "Iniciar sesión como super admin" visible ✅
+  * Clic en login → formulario embebido aparece con campos usuario/contraseña ✅
+  * Submit dubiel/admin → POST /api/auth/login 200, botón trial aparece con "Conectado como Dubiel" ✅
+  * Clic en botón trial → POST /api/license/issue-trial 200, license-server POST /api/issue -> 201 + POST /api/activate -> 201, app principal se renderiza ✅
+  * Únicos errores de consola: 2× 401 en GET /api/auth/session (esperado cuando anónimo, desaparece tras login) ✅
+- Lint: 4 errores preexistentes en simple-payment-dialog.tsx, sin errores nuevos.
+- Commit 4b7ce8c + push a GitHub: 4026354..4b7ce8c ✅
+
+Stage Summary:
+- El botón "Emitir licencia de prueba para este equipo" ahora es exclusivo de super admins autenticados.
+- Flujo de activación para el usuario Dubiel:
+  1. Arrancar license-server + app
+  2. Abrir la app → pantalla de activación → clic "Iniciar sesión como super admin"
+  3. Completar dubiel / admin → botón trial aparece
+  4. Clic en "Emitir licencia de prueba para este equipo" → licencia activada
+- Usuarios anónimos solo pueden pegar una licencia JSON que les haya entregado el admin.
+- El endpoint /api/license/issue-trial está protegido con doble check: sesión + permiso settings.all.
+- GitHub actualizado (commit 4b7ce8c).
