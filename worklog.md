@@ -533,3 +533,45 @@ Stage Summary:
 - Servicios corriendo: dev server :3000 (keep-alive PID 11463), license-server :3042 (keep-alive PID 2825)
 - Claves criptográficas: privada en mini-services/license-server/keys/private.pem (NUNCA al cliente), pública en src/lib/license-public-key.pem (embebida en el build)
 - ADMIN_API_KEY del license-server: kiosko-admin-secret-2025 (rotar en producción y mover a env/secret manager)
+
+---
+Task ID: LIC-3
+Agent: Main Agent
+Task: Subir cambios a GitHub — alternativa con script para sincronizar desde PC local (ssh-keygen no disponible en sandbox)
+
+Work Log:
+- Detectado que no hay cliente SSH ni gh CLI en el sandbox (ssh-keygen: command not found)
+- Generado par de claves Ed25519 con Bun + node:crypto (privada ~/.ssh/id_ed25519, pública ~/.ssh/id_ed25519.pub en formato OpenSSH)
+- Cambiado remote de HTTPS a SSH: git@github.com:dubiels86/kioskoapp.git
+- Configurado ~/.ssh/known_hosts con las claves públicas oficiales de GitHub (ed25519, ecdsa, rsa)
+- Configurado ~/.ssh/config con IdentityFile apuntando a la nueva clave
+- INTENTÉ `git push origin main` → falló con "error: cannot run ssh: No such file or directory / fatal: unable to fork" (no hay binario ssh en el sandbox, solo las claves)
+- ESTRATEGIA ALTERNATIVA (sin SSH ni PAT): crear tarball del código fuente + script de sincronización para la PC local
+  * Creado /home/z/my-project/public/kiosko-src-snapshot.tar.gz (332KB, 292 archivos)
+    - Excluye: node_modules, .next, .git, DBs (*.db, *.db-*), public/*.tar.gz, screenshots, logs, .env, skills/, agent-ctx/, tool-results/
+    - Incluye: src/ (con proxy.ts + sistema de licencia completo), scripts/, prisma/, mini-services/license-server/ (sin data.db ni keys/), public/update.sh, configs raíz (package.json, bun.lock, tsconfig.json, next.config.ts, tailwind.config.ts, postcss.config.mjs, eslint.config.mjs, Caddyfile, .gitignore)
+  * Creado /home/z/my-project/public/sync-from-sandbox.sh (7.4KB, executable)
+    - Verifica que se ejecuta en un repo git limpio
+    - Crea branch de backup (backup/pre-sync-YYYYMMDD-HHMMSS)
+    - Extrae el tarball (detecta automáticamente si tiene prefijo kiosko-app/ o no)
+    - git add -A + git commit con mensaje descriptivo del sistema de licencia
+    - git push origin main (usa las credenciales ya configuradas en la PC local del usuario)
+    - Manejo de errores: si el push falla, deja el commit en el repo local con instrucciones para reintentar
+    - Limpieza: elimina el tarball después del sync exitoso
+- BUG ENCONTRADO Y ARREGLADO: src/middleware.ts y src/proxy.ts coexistían (middleware.ts fue restaurado por un reset o por git checkout). Next.js 16 detecta ambos y tira "Both middleware file and proxy file are detected". Borrado middleware.ts definitivamente. Solo queda proxy.ts.
+- Dev server estabilizado con setsid + keep-alive.sh (PID 3243/3245/3257) — sobrevive entre sesiones del Bash tool al reparentear a init.
+- Verificado que ambos archivos son descargables vía HTTP:
+  * GET /kiosko-src-snapshot.tar.gz → HTTP 200, 339450 bytes (332KB)
+  * GET /sync-from-sandbox.sh → HTTP 200, 7549 bytes (7.4KB)
+
+Stage Summary:
+- No se pudo hacer push directo desde el sandbox (sin ssh client, sin gh, sin PAT)
+- Alternativa: dos archivos descargables listos para sincronizar la PC local con GitHub
+- Archivo 1: kiosko-src-snapshot.tar.gz (332KB) — código fuente actualizado del sandbox
+- Archivo 2: sync-from-sandbox.sh (7.4KB) — script que sincroniza repo local + pushea a GitHub
+- Ambos disponibles en:
+  * Panel de Vista Previa (http://localhost:3000/kiosko-src-snapshot.tar.gz y /sync-from-sandbox.sh)
+  * Botón "Descargar Proyecto" de la UI (en src/app/page.tsx hay un link que usa /api/download)
+- BUG FIX secundario: src/middleware.ts (que causaba conflicto con proxy.ts) eliminado definitivamente
+- Dev server corriendo estable en :3000 via keep-alive.sh + setsid
+- Credenciales de GitHub: el usuario las tiene configuradas en su PC local, el script las usa automáticamente
