@@ -863,3 +863,88 @@ Stage Summary:
   5. `bun run dev` en la raíz, abrir la app, pegar el JSON en la pantalla de activación
 - Clave admin por defecto: `kiosko-admin-secret-2025` (rotar en producción)
 - Archivos nuevos/modificados: mini-services/license-server/index.ts, mini-services/license-server/issue-license.ts
+
+---
+Task ID: VERIFY-TRIAL-BUTTON
+Agent: general-purpose (browser verification)
+Task: Verify the new "Emitir licencia de prueba" button works end-to-end via Agent Browser
+
+Work Log:
+- Leído /home/z/my-project/worklog.md (865 líneas) para entender el contexto previo del sistema de licencias (LIC-1/LIC-2, LicenseGate, license-server auto-bootstrap, installer, etc.).
+- Revisado el código relevante antes de probar:
+  * src/components/license/license-gate.tsx — confirmé que el botón "Emitir licencia de prueba para este equipo" está dentro de un div con clases "bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4" (caja esmeralda), con ícono Zap de lucide-react, posicionado ANTES del divider "o pegá una licencia existente" y del textarea #license-content. El handler handleIssueTrial() hace POST /api/license/issue-trial con { days: 30 }.
+  * src/app/api/license/issue-trial/route.ts — confirmé el flujo: (1) POST al license-server /api/issue con X-Admin-Key para emitir una trial (plan=trial, maxDevices=1, 30 días), (2) activateLicense() local que verifica firma + registra activación, (3) setLicenseResponseCookie() para que el middleware deje pasar. Devuelve { ok:true, status:'active', license, fingerprint }.
+  * src/app/api/auth/session/route.ts — devuelve 401 cuando no hay usuario logueado (relevante para interpretar el único error de consola observado).
+- Detecté que ni el dev server (:3000) ni el license-server (:3042) estaban corriendo al inicio (curl devolvía HTTP 000). El sandbox mata los procesos background entre llamadas Bash separadas, así que tuve que orquestar TODO en un único comando Bash persistente: arranqué ambos servers en background dentro del mismo shell, esperé a que respondieran, desactivé la licencia, corrí Playwright, y limpié al final (trap EXIT).
+- Desactivé la licencia existente: `curl -s -X POST http://localhost:3000/api/license/deactivate` → {"ok":true,"message":"Licencia desactivada correctamente."}
+- Verificación con Playwright (chromium headless, 1280x900), script en /home/z/verify-trial/verify.py:
+  * Navegué a http://localhost:3000/ con wait_until="networkidle" (45s timeout).
+  * Esperé al header "Activación de Licencia Requerida" (estado 'unlicensed' del LicenseGate).
+  * Screenshot 1 → /home/z/verify-trial/01_activation_screen.png (1280x909, 340KB) muestra la card de activación con la caja esmeralda y el botón verde.
+  * Verifiqué el botón por ARIA role+name "Emitir licencia de prueba para este equipo": 1 botón encontrado, visible.
+  * Verifiqué la caja esmeralda (div.bg-emerald-500/10): visible.
+  * Verifiqué ícono svg (Zap) dentro de la caja esmeralda: presente.
+  * Verifiqué el divider con texto "o pegá una licencia existente": presente.
+  * Verifiqué el textarea #license-content: visible y enabled.
+  * Verifiqué ORDEN: el botón trial está ARRIBA del textarea (bounding_box.y menor): correcto.
+  * Hice click en el botón verde, esperando la respuesta /api/license/issue-trial.
+  * Respuesta: HTTP 200, body {"ok":true,"status":"active","message":"Licencia trial activada para \"c-6a48ff8e-...\" (30 días).","license":{"licenseId":"0b4c2a3c-3a41-4d56-8fa6-598ef2dd9fb8","customer":"Trial c-6a48ff8e-...","plan":"trial","issuedAt":"2026-07-04T20:21:25.182Z","expiresAt":"2026-08-03T20:21:25.174Z","maxDevices":1,"features":[],"signature":"4JvBllKL..."},"fingerprint":"054654b4..."}
+  * Esperé a que el header "Activación de Licencia Requerida" se desmontara (state="detached", 30s timeout): ocurrió correctamente.
+  * Screenshot 2 → /home/z/verify-trial/02_after_activation.png (1280x900, 322KB) muestra la app principal renderizada (ya no la card de activación).
+  * Verifiqué que la card de activación ya NO está visible tras el click: card_still_visible = false.
+- Captura de consola del navegador (/home/z/verify-trial/console.log): solo React DevTools info, mensajes HMR/Fast Refresh, y UN único error: "Failed to load resource: the server responded with a status of 401 (Unauthorized)". Investigado: corresponde a GET /api/auth/session que devuelve 401 cuando no hay usuario logueado (comportamiento esperado y documentado en src/app/api/auth/session/route.ts línea 8). No afecta al flujo del botón trial.
+- Sin page_errors (excepciones JS no capturadas): 0.
+- Sin request_failures (fallos de red): 0.
+
+Stage Summary:
+- Resultado: PASS
+- Verificado end-to-end con navegador real (Playwright/Chromium):
+  1. El botón verde "Emitir licencia de prueba para este equipo" aparece correctamente dentro de una caja esmeralda (bg-emerald-500/10 + borde emerald-500/30) con ícono Zap, ANTES del divider "o pegá una licencia existente" y del textarea. Layout correcto.
+  2. Click en el botón → POST /api/license/issue-trial devuelve 200 con ok=true, status=active, licencia trial de 30 días emitida (plan=trial, maxDevices=1, fingerprint del equipo) y activada en un solo paso. La card de activación desaparece y se renderiza la app principal.
+  3. Errores de consola: solo 1, un 401 de /api/auth/session (esperado, no hay usuario logueado). No hay excepciones JS ni fallos de red.
+  4. Sin issues visuales ni de layout.
+- Artefactos guardados en /home/z/verify-trial/: 01_activation_screen.png, 02_after_activation.png, console.log, result.json, verify.py, run.sh.
+- No se modificó ningún código (verificación only).
+
+---
+Task ID: TRIAL-ONE-CLICK
+Agent: Main Agent
+Task: Agregar botón "Emitir licencia de prueba para este equipo" en la pantalla de activación, para que el usuario no tenga que copiar/pegar manualmente el JSON de la licencia al iniciar el proyecto en su PC local.
+
+Work Log:
+- Diagnóstico: el usuario ve la pantalla de activación pidiendo pegar el JSON de la licencia. El flujo manual (correr issue-license.ts en otra terminal, copiar JSON, pegar en la UI) es engorroso para onboarding en su propia PC.
+- Creado endpoint `src/app/api/license/issue-trial/route.ts` (POST):
+  * Llama al license-server (localhost:3042) con la ADMIN_API_KEY para EMITIR una licencia trial (plan=trial, maxDevices=1, 30 días por defecto).
+  * Inmediatamente ACTIVA esa licencia llamando a activateLicense() — verifica firma Ed25519 localmente + registra la activación en el license-server con el fingerprint de esta máquina.
+  * Persiste el estado en la DB local (Prisma) y setea la cookie firmada kiosko-license via setLicenseResponseCookie().
+  * Seguro: solo emite trials (nunca pro/enterprise), la admin key solo se usa server-to-server, nunca se envía al browser.
+  * Body opcional: { customer?: string, days?: number (1-365, default 30) }
+- Modificado `src/components/license/license-gate.tsx`:
+  * Agregado icono Zap a los imports de lucide-react.
+  * Agregado estado `issuingTrial` y función `handleIssueTrial()` que llama al endpoint y refresca el estado.
+  * Agregado bloque visual destacado (caja emerald con icono Zap) ARRIBA del formulario de pegar licencia, con el botón "Emitir licencia de prueba para este equipo".
+  * Agregado separador visual "o pegá una licencia existente" entre el botón trial y el textarea, para que quede claro que ambas opciones coexisten.
+- Proxy (src/proxy.ts) ya permite /api/license/* sin cookie (línea 8), así que el endpoint es alcanzable desde la pantalla de activación.
+- Verificación E2E con curl:
+  * POST /api/license/issue-trial {"days":30} → 200 {"ok":true,"status":"active","license":{licenseId, customer:"Trial <hostname>", plan:"trial", expiresAt:+30d, maxDevices:1, signature},"fingerprint":...}
+  * GET /api/license/status después → {"status":"active","license":{...},"fingerprint":...,"lastHeartbeat":...,"graceUntil":...}
+  * license-server.log confirma: POST /api/issue -> 201, POST /api/activate -> 201 (activación 1/1 dispositivos)
+- Verificación E2E con Agent Browser (subagente VERIFY-TRIAL-BUTTON):
+  * Pantalla de activación muestra el botón verde con icono Zap, arriba del divider y el textarea.
+  * Clic en el botón → POST /api/license/issue-trial 200 → licencia activada → app principal se renderiza.
+  * Único error de consola: 401 en /api/auth/session (esperado, no relacionado — es el check de sesión de usuario).
+  * Sin errores de página, sin fallos de requests.
+- Lint: 4 errores preexistentes en src/components/pos/simple-payment-dialog.tsx (react-hooks/set-state-in-effect), sin relación con estos cambios. Sin errores nuevos.
+
+Stage Summary:
+- La pantalla de activación ahora tiene DOS caminos:
+  1. **Botón verde "Emitir licencia de prueba para este equipo"** (recomendado, 1 clic) — emite + activa trial 30 días automáticamente, sin copiar/pegar nada. Requiere license-server corriendo.
+  2. **Textarea + "Subir archivo"** (manual) — para licencias pro/enterprise emitidas desde el panel admin.
+- Flujo de onboarding en PC local simplificado a 3 pasos:
+  1. `cd mini-services/license-server && bun run dev` (genera claves solo si faltan)
+  2. `bun run dev` en la raíz
+  3. Abrir la app → clic en "Emitir licencia de prueba para este equipo" → listo
+- Archivos nuevos/modificados:
+  * src/app/api/license/issue-trial/route.ts (NUEVO)
+  * src/components/license/license-gate.tsx (modificado: +botón trial, +divider, +handleIssueTrial)
+- El endpoint solo emite TRIALS (plan=trial, maxDevices=1). Para licencias pro/enterprise, usar el panel admin (Ajustes → Licencias) o el script issue-license.ts.

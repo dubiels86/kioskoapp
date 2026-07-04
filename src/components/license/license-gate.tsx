@@ -12,6 +12,7 @@ import {
   Power,
   Clock,
   AlertTriangle,
+  Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -125,6 +126,7 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
   const [activating, setActivating] = useState(false)
   const [deactivating, setDeactivating] = useState(false)
   const [ensuringCookie, setEnsuringCookie] = useState(false)
+  const [issuingTrial, setIssuingTrial] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -282,6 +284,37 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleIssueTrial = async () => {
+    setIssuingTrial(true)
+    try {
+      const res = await fetch('/api/license/issue-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ days: 30 }),
+      })
+      const data = (await res.json().catch(() => null)) as {
+        ok?: boolean
+        status?: string
+        message?: string
+      } | null
+      if (data?.ok) {
+        toast.success('Licencia trial activada.', {
+          description: data.message,
+        })
+        await refreshStatus()
+      } else {
+        toast.error('No se pudo emitir la licencia de prueba.', {
+          description: data?.message || 'Error desconocido.',
+        })
+      }
+    } catch {
+      toast.error('Error de conexión al emitir la licencia de prueba.')
+    } finally {
+      setIssuingTrial(false)
+    }
+  }
+
   // ----- Render -----
   if (status === 'loading') {
     return (
@@ -401,6 +434,46 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
           {/* Activation form */}
           {needsActivation && (
             <div className="space-y-3">
+              {/* One-click trial activation — the recommended path for a fresh
+                  install where the license-server is running locally. */}
+              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                  <div className="text-sm text-emerald-200">
+                    <strong className="text-emerald-100">Activación rápida:</strong> emitir una
+                    licencia de prueba de 30 días para este equipo automáticamente (requiere el
+                    servidor de licencias corriendo).
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleIssueTrial}
+                  disabled={issuingTrial || activating}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                >
+                  {issuingTrial ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Emitiendo y activando...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Emitir licencia de prueba para este equipo
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3 py-1">
+                <div className="h-px flex-1 bg-slate-700/50" />
+                <span className="text-xs text-slate-500 uppercase tracking-wider">
+                  o pegá una licencia existente
+                </span>
+                <div className="h-px flex-1 bg-slate-700/50" />
+              </div>
+
               <Label htmlFor="license-content" className="text-slate-300 text-sm font-medium">
                 Contenido del archivo de licencia (.lic)
               </Label>
