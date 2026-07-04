@@ -52,3 +52,6 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Installer binaries (too large for GitHub, distribute separately)
+public/kioskoapp-installer*.tar.gz
+public/kiosko-src-snapshot.tar.gz

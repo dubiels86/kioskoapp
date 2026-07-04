@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     ".space-z.ai",
   ],
+  // Build standalone: genera .next/standalone/ con server.js autocontenido
+  // (sin necesidad de node_modules completos en producción).
+  // El código fuente TS/TSX se compila a JS minificado — no se expone.
+  output: "standalone",
 };
 
 export default nextConfig;

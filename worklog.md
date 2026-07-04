@@ -575,3 +575,181 @@ Stage Summary:
 - BUG FIX secundario: src/middleware.ts (que causaba conflicto con proxy.ts) eliminado definitivamente
 - Dev server corriendo estable en :3000 via keep-alive.sh + setsid
 - Credenciales de GitHub: el usuario las tiene configuradas en su PC local, el script las usa automáticamente
+
+---
+Task ID: INSTALL-LINUX
+Agent: install-linux-builder
+Task: Create Linux installer and uninstaller scripts for KioskoApp
+
+Work Log:
+- Leído worklog.md (secciones LIC-1/LIC-2/LIC-3) para entender el contexto del sistema de licencias: license-server en mini-services/license-server/ (puerto 3042, Bun + SQLite, ADMIN_API_KEY hardcoded = kiosko-admin-secret-2025), firma Ed25519, fingerprint de hardware, floating licenses con grace 7d, telemetría silenciosa, panel super-admin en Ajustes > Licencias.
+- Leído prisma/schema.prisma: modelos User, Role, Product, Sale, LicenseState, etc. La BD es SQLite vía env("DATABASE_URL").
+- Leído scripts/create-super-admin.ts: crea rol "Super Administrador" con todos los permisos + usuario "dubiel" con bcrypt. La versión instalador usa password "admin" (no "openpgpwd" ni "TuNuevaContraseña123" del original).
+- Leído install-produccion.sh (macOS) como referencia de estilo y estructura del banner final.
+- Verificado que license-server/index.ts usa paths hardcoded relativo a import.meta.dir: keys/private.pem y data.db. Esto determina que el binario en /opt/kioskoapp/license-server buscará /opt/kioskoapp/keys/private.pem y /opt/kioskoapp/data.db.
+- Confirmado que @prisma/client y bcryptjs son dependencias runtime (package.json) — estarán en el node_modules del standalone build, así que el script de seed puede usarlos.
+- Creado /home/z/my-project/scripts/install-linux.sh (~610 líneas, 24KB, ejecutable):
+  * set -euo pipefail al inicio
+  * Funciones de logging con colores (red/green/yellow/cyan/blue, [INFO]/[OK]/[WARN]/[ERROR])
+  * Función ask_yn para prompts sí/no interactivos (default configurable)
+  * Verificación root/sudo (UID=0)
+  * Preflight: uname -s == Linux, detección systemd (die si no hay), node >= 18 (con sugerencia apt/yum nodesource setup_20.x), bun (con sugerencia curl bun.sh/install), openssl (para genpkey Ed25519), verificación de contenido del tarball al lado del script (app/, license-server, prisma/schema.prisma, scripts/kiosko-runtime.sh)
+  * Detección de NOLOGIN_SHELL (/usr/sbin/nologin o /sbin/nologin) para useradd
+  * Creación usuario kiosko (useradd --system --no-create-home --shell nologin) si no existe
+  * Creación directorios: /opt/kioskoapp/{app,prisma,data,keys}, /var/log/kioskoapp (0750, owner kiosko:kiosko)
+  * Copia: app/ → /opt/kioskoapp/app, license-server → /opt/kioskoapp/license-server (chmod 0755), prisma/schema.prisma → /opt/kioskoapp/prisma/, scripts/kiosko-runtime.sh → /opt/kioskoapp/kiosko-runtime.sh (chmod 0755)
+  * Generación claves Ed25519 (si no existen): openssl genpkey -algorithm Ed25519 → private.pem (0600), openssl pkey -pubout → public.pem (0644, formato SPKI PEM)
+  * Symlink para BD del license-server: /opt/kioskoapp/data.db → /opt/kioskoapp/data/license-server.db (porque el binario busca data.db hardcoded en su dir; el symlink lo redirige a nuestra ubicación limpia para backups)
+  * Generación kiosko.env con: NODE_ENV=production, PORT=3000, HOSTNAME=0.0.0.0, DATABASE_URL=file:/opt/kioskoapp/data/custom.db, LICENSE_SERVER_URL=http://localhost:3042, LICENSE_SERVER_ADMIN_KEY=kiosko-admin-secret-2025 (hardcoded en el binario compilado, documentado), LICENSE_PUBLIC_KEY_PATH, ADMIN_API_KEY=<64 hex chars aleatorio>, LICENSE_COOKIE_SECRET=<64 hex chars aleatorio>, INSTALL_DIR, LOG_DIR
+  * Inicialización BD: export DATABASE_URL + bunx prisma db push --schema /opt/kioskoapp/prisma/schema.prisma --accept-data-loss (corre desde /opt/kioskoapp/app para que @prisma/client se regenere en su node_modules)
+  * Seed super-admin: script JS temporal vía mktemp + heredoc, usa @prisma/client + bcryptjs del node_modules del app, crea/actualiza rol "Super Administrador" con 18 permisos + usuario dubiel con password "admin" (bcrypt hash rounds=10), email dubiel@kioskoapp.com. Verificación post-seed.
+  * chown -R kiosko:kiosko /opt/kioskoapp, chmod restrictivo en private.pem (0600), env (0640), data/ y keys/ (0750)
+  * Service file systemd /etc/systemd/system/kioskoapp.service: Type=simple, User/Group=kiosko, WorkingDirectory=/opt/kioskoapp, EnvironmentFile=kiosko.env, ExecStart=kiosko-runtime.sh, Restart=always, RestartSec=5, StandardOutput=append:/var/log/kioskoapp/app.log, StandardError=append:/var/log/kioskoapp/app.err.log, hardening (NoNewPrivileges, ProtectSystem=full, ProtectHome, PrivateTmp, ReadWritePaths), WantedBy=multi-user.target
+  * systemctl daemon-reload + enable + start + sleep 5 + is-active --quiet check
+  * Verificación HTTP: curl a localhost:3000 (acepta 200/307/302) y localhost:3042/api/health (espera 200)
+  * Banner final con: ubicación, URLs, credenciales (dubiel/admin con warning de cambiar password), archivos importantes (BD paths, claves, env, logs, service file), comandos de gestión (status/stop/start/restart/journalctl/tail), mención del uninstall script, recordatorio de activar licencia
+- Creado /home/z/my-project/scripts/uninstall-linux.sh (~290 líneas, 9.7KB, ejecutable):
+  * Mismo estilo de logging/colores que install
+  * Verificación root/sudo
+  * Confirmación inicial del usuario (default No para evitar borrados accidentales)
+  * systemctl stop kioskoapp + systemctl disable kioskoapp (con guards si no existe/no activo/no enabled)
+  * rm -f /etc/systemd/system/kioskoapp.service + systemctl daemon-reload + systemctl reset-failed
+  * Backup opcional de custom.db a ~/kioskoapp-backup-YYYYMMDD.db (default Sí)
+  * Backup opcional de license-server.db (resuelve symlink via readlink -f) a ~/kioskoapp-license-backup-YYYYMMDD.db
+  * Pregunta para borrar /opt/kioskoapp (default No)
+  * Pregunta para borrar /var/log/kioskoapp (default No)
+  * pkill -u kiosko + userdel + groupdel (default No)
+  * Resumen final con estado de cada componente + ubicación de backups
+- chmod +x aplicado a ambos scripts.
+- bash -n (syntax check) pasó para ambos. shellcheck no disponible en el sandbox.
+- Bug encontrado y arreglado: typo ${BACKUP_FILE_LICENSE${NC}} → ${BACKUP_FILE_LICENSE}${NC} en uninstall-linux.sh (2 instancias).
+
+Stage Summary:
+- Archivos creados:
+  * /home/z/my-project/scripts/install-linux.sh (24KB, ejecutable, ~610 líneas)
+  * /home/z/my-project/scripts/uninstall-linux.sh (9.7KB, ejecutable, ~290 líneas)
+- Decisiones clave:
+  1. El binario license-server busca keys/private.pem y data.db hardcoded en import.meta.dir (= /opt/kioskoapp cuando el binario vive en /opt/kioskoapp/license-server). Para que la BD del license-server caiga en /opt/kioskoapp/data/license-server.db (path limpio para backups) como pide el spec, se creó un symlink /opt/kioskoapp/data.db → /opt/kioskoapp/data/license-server.db.
+  2. El ADMIN_API_KEY del license-server está HARDCODED en el binario compilado (= kiosko-admin-secret-2025). Se documentó en kiosko.env como LICENSE_SERVER_ADMIN_KEY y se generó además un ADMIN_API_KEY aleatorio separado para uso futuro si se recompila el binario para leer de env. La app cliente (src/lib/license-admin.ts) debe usar la misma clave hardcoded para llamar al license-server.
+  3. El seed del super-admin se hace con un script JS temporal (mktemp + heredoc) que corre desde /opt/kioskoapp/app para tener acceso a @prisma/client y bcryptjs del node_modules del standalone build. Crea rol "Super Administrador" con 18 permisos + usuario dubiel/admin (bcrypt rounds=10).
+  4. Prisma db push se ejecuta desde /opt/kioskoapp/app con --schema /opt/kioskoapp/prisma/schema.prisma para que @prisma/client se regenere en el node_modules correcto del standalone build.
+  5. El usuario del sistema `kiosko` se crea con --system --no-create-home --shell /usr/sbin/nologin (o /sbin/nologin fallback). El servicio systemd corre como este usuario con hardening (NoNewPrivileges, ProtectSystem, ProtectHome, PrivateTmp, ReadWritePaths restringido a /opt/kioskoapp y /var/log/kioskoapp).
+  6. UI text y comentarios en español (el app es en español). Colores: verde éxito, amarillo warnings, rojo errores, cyan info, azul pasos.
+- Credenciales creadas por el installer: dubiel / admin (super-admin, con warning de cambiar password en primer login).
+- Recordatorio incluido en el banner final: la app mostrará LicenseGate hasta que se active una licencia (el sistema L1+L2+L3 está completo desde LIC-1/LIC-2).
+- Ambos scripts validados con bash -n (syntax OK). No se ejecutaron end-to-end porque requieren root + Linux + tarball real (no disponible en sandbox macOS).
+- PRÓXIMO PASO: empaquetar app/ (standalone build), license-server (binario Bun compilado), prisma/schema.prisma, scripts/kiosko-runtime.sh, scripts/install-linux.sh, scripts/uninstall-linux.sh, README-INSTALACION.txt dentro de kioskoapp-installer.tar.gz para distribución.
+
+---
+Task ID: RUNTIME-SCRIPT
+Agent: runtime-script-builder
+Task: Create kiosko-runtime.sh — production runtime script that starts Next.js app + license-server with auto-restart and clean shutdown
+
+Work Log:
+- Leído /home/z/my-project/worklog.md (últimas ~150 líneas) para contexto del sistema de licencia: license-server en puerto 3042 (Bun + SQLite, binario compilado), app Next.js standalone en puerto 3000, claves Ed25519 en keys/, ADMIN_API_KEY hardcoded kiosko-admin-secret-2025, sistema L1+L2+L3 completo desde LIC-1/LIC-2.
+- Leído scripts existentes (keeper.sh, mini-services/license-server/keep-alive.sh, install-produccion.sh) para matching de estilo (bash + español + colores ANSI + banner en ASCII).
+- Leído mini-services/license-server/index.ts (primeras 60 líneas) para confirmar: puerto 3042 hardcoded, keys/private.pem y data.db resueltos vía import.meta.dir (= directorio del binario), endpoint /api/health disponible.
+- Creado /home/z/my-project/scripts/kiosko-runtime.sh (357 líneas, 13.9 KB) con:
+  * set -euo pipefail
+  * Detección de directorio: DIR="$(cd "$(dirname "$0")" && pwd)"
+  * Carga opcional de $DIR/kiosko.env con `set -a; source; set +a` (exporta todas las vars)
+  * Defaults robustos: NODE_ENV=production, PORT=3000, LICENSE_SERVER_URL=http://localhost:3042
+  * mkdir -p data/ logs/ keys/ (chmod 700 keys/)
+  * Validación: si license-server no es ejecutable o app/server.js no existe → error claro + exit 1
+  * Función start_service(NAME, PID_FILE, LOG_FILE, WORKDIR, CMD...): pushd WORKDIR, CMD & , SERVICE_PID=$!, popd, escribe PID file, log con timestamp
+  * Función stop_service(NAME, PID_FILE): SIGTERM, polling cada 100ms hasta 5s, SIGKILL fallback, limpia PID file
+  * Función health_check(LABEL, URL, EXPECTED_REGEX, MAX_TRIES): curl con --max-time 3 --connect-timeout 2, reintenta cada 1s
+  * Función cleanup: idempotente (flag CLEANING_UP), detiene app y license-server
+  * Traps: SIGINT/SIGTERM → EXIT_CODE=0 + cleanup + exit (cierre limpio del supervisor); EXIT → cleanup
+  * Banner con timestamps y todas las vars de entorno (DATABASE_URL, ADMIN_API_KEY, bash version, wait -n soportado)
+  * Lanzamiento: 1) license-server, 2) sleep 2s, 3) verificación kill -0 (aborta si murió en arranque), 4) Next.js app con `env NODE_ENV=production PORT=3000 node server.js`
+  * Health checks: /api/health (200) y / (200|302|307) con reintentos
+  * Loop de supervisión: si bash 4.3+ usa `wait -n` (bloquea hasta que cualquier job termine), sino polling con kill -0 cada 1s
+  * Si un servicio muere → log diagnóstico, EXIT_CODE=1, cleanup mata al otro, exit 1 (supervisor reinicia)
+- chmod +x aplicado al script.
+- BUG CRÍTICO ENCONTRADO Y ARREGLADO durante testing: la primera versión usaba `LICENSE_PID="$(start_service ...)"` (command substitution). Esto lanzaba el proceso background `&` DENTRO de la subshell de $(); cuando la subshell salía (después del echo final), el job `&` quedaba huérfano y `wait -n` del caller los desconocía (retornaba 127 = "no jobs"). Fix: cambiar start_service para setear la global SERVICE_PID en vez de imprimir a stdout, y el caller lee $SERVICE_PID directamente sin $(). Verificado: con el fix, `wait -n` bloquea correctamente hasta que un job termina.
+- Tests E2E ejecutados con servicios fake (Python http.server en 3042 + Node http en 3000):
+  1. Validación: sin binarios → error claro + exit 1 ✓
+  2. Validación: sin app/server.js → error claro + exit 1 ✓
+  3. Happy path + SIGTERM: ambos servicios arrancan, health checks 200, wait -n bloquea, SIGTERM al runtime → cleanup mata ambos limpiamente, exit 0, PID files borrados, sin procesos huérfanos ✓
+  4. Crash: SIGKILL al license-server en plena supervisión → wait -n retorna 137, runtime diagnostica "license-server murió inesperadamente", cleanup SIGTERM a la app, exit 1, sin huérfanos ✓
+- bash -n: SYNTAX OK. shellcheck no disponible en sandbox.
+
+Stage Summary:
+- Archivo creado: /home/z/my-project/scripts/kiosko-runtime.sh (357 líneas, 13.9 KB, ejecutable)
+- Script de runtime production-ready para KioskoApp: arranca license-server (:3042) + Next.js standalone (:3000), supervisa con `wait -n` (bash 4.3+) o polling (bash 3.2 macOS), health checks post-arranque, traps SIGTERM/SIGINT/EXIT para cierre limpio, exit 0 en cierre del supervisor / exit 1 en crash (supervisor reinicia).
+- Decisiones clave:
+  1. start_service setea global SERVICE_PID en vez de stdout — evita el bug de subshell huérfana con $().
+  2. exit code 0 = cierre limpio (supervisor no reinicia), exit code 1 = crash (supervisor reinicia). Mapea a KeepAlive (launchd) y Restart=on-failure (systemd).
+  3. stop_service hace SIGTERM + 5s polling + SIGKILL fallback — cierre ordenado pero garantizado.
+  4. NODE_ENV y PORT pasados explícitamente vía `env` al node, además de estar exportados — robustez si el supervisor resetea el entorno.
+  5. PATH prependeado con /opt/homebrew/bin, /usr/local/bin, /usr/bin, /bin, $HOME/.bun/bin — servicios no heredan shell completo.
+  6. Detección de wait -n vía BASH_VERSINFO — fallback automático a polling para macOS bash 3.2.
+- Layout esperado del directorio de instalación: $DIR/{kiosko-runtime.sh, kiosko.env?, license-server, app/server.js, data/, logs/, keys/}
+- Variables de entorno documentadas al inicio del script: DATABASE_URL, NODE_ENV, PORT, LICENSE_SERVER_URL, ADMIN_API_KEY, NEXTAUTH_SECRET.
+- Listo para empaquetar dentro de kioskoapp-installer.tar.gz como siguiente paso (mencionado en tarea INSTALLER-LINUX).
+
+---
+Task ID: INSTALL-MACOS
+Agent: install-macos-builder
+Task: Create macOS installer and uninstaller scripts for KioskoApp
+
+Work Log:
+- Leído worklog.md (secciones LIC-1/LIC-2/LIC-3) para entender el contexto del sistema de licencias: license-server en mini-services/license-server/ (puerto 3042, Bun + SQLite, ADMIN_API_KEY hardcoded = kiosko-admin-secret-2025), firma Ed25519 con clave privada en mini-services/license-server/keys/private.pem y pública embebida en el cliente, fingerprint de hardware, floating licenses con grace 7d, telemetría silenciosa, panel super-admin en Ajustes > Licencias. Credenciales super-admin: dubiel/admin.
+- Leído prisma/schema.prisma (344 líneas): modelos Category, Product, Warehouse, ProductStock, InventoryMovement, Supplier, Purchase, Sale, SaleItem, SalePayment, CashRegister, CashMovement, Repair, RepairPart, Role, User, Expense, Currency, ExchangeRateHistory, Setting, LicenseState. La BD es SQLite vía env("DATABASE_URL").
+- Leído scripts/create-super-admin.ts: crea rol "Super Administrador" con 18 permisos (pos.access, pos.refund, inventory.access, inventory.manage, purchases.access, purchases.manage, expenses.access, expenses.manage, cash.access, cash.open, cash.close, repairs.access, repairs.manage, reports.access, settings.access, settings.users, settings.roles, settings.all) + usuario "dubiel" con bcrypt. La versión instalador usa password "admin" (per spec).
+- Leído src/lib/license.ts: LICENSE_SERVER_URL = 'http://localhost:3042' (constante hardcoded, no override por env). PUBLIC_KEY_PEM se carga al init del módulo probando 3 rutas candidatas relativas a process.cwd(): src/lib/license-public-key.pem, lib/license-public-key.pem, license-public-key.pem (fallback). Esto determina dónde copiar la clave pública generada en el instalador.
+- Leído src/lib/license-admin.ts: LICENSE_ADMIN_API_KEY = process.env.LICENSE_ADMIN_API_KEY || 'kiosko-admin-secret-2025' (override por env disponible en la app Next.js, pero el binario license-server tiene el valor hardcoded en compile-time).
+- Leído src/lib/license-secret.ts: LICENSE_COOKIE_SECRET = process.env.LICENSE_COOKIE_SECRET || 'kiosko-license-cookie-secret-2025-do-not-ship-as-is' (override por env, debe rotarse en producción).
+- Leído mini-services/license-server/index.ts (primeras 120 líneas): PRIVATE_KEY_PATH = path.resolve(import.meta.dir, "keys/private.pem"), DB_PATH = path.resolve(import.meta.dir, "data.db"). Esto confirma que el binario compilado busca su clave y DB en el MISMO directorio donde reside el ejecutable, independientemente del cwd. Esto determina el layout de instalación y la necesidad de un symlink.
+- Leído mini-services/license-server/README.md: confirmados todos los endpoints (issue, activate, heartbeat, deactivate, revoke, unrevoke, licenses, telemetry, health), esquema SQL de las 3 tablas (licenses, activations, telemetry), semántica floating-license, notas de seguridad (private.pem NUNCA al cliente, ADMIN_API_KEY rotate en producción, CORS permissive).
+- Leído prisma/seed.ts: script que crea 2 almacenes (PRINCIPAL, VENTAS), 4 roles (Administrador, Vendedor, Cajero, Depósito) — NO crea el rol "Super Administrador" ni el usuario dubiel. Por eso el instalador necesita un seed propio.
+- Leído install-produccion.sh (script macOS preexistente) como referencia de estilo y estructura del banner final. NOTA: ese script instala desde el código fuente (no desde tarball precompilado) y NO maneja license-server ni claves Ed25519 — es de antes del sistema de licencias.
+- Leído package.json: dependencias runtime incluyen bcryptjs (^3.0.3), @prisma/client (^6.19.2), prisma (^6.11.1). Confirmado que bcryptjs y prisma estarán en el node_modules del standalone build (porque son importados por src/lib/auth.ts y usados por el build).
+- Creado /home/z/my-project/scripts/install-macos.sh (~665 líneas, 27KB, ejecutable, chmod +x):
+  * set -euo pipefail al inicio
+  * Colores ANSI (RED/GREEN/YELLOW/CYAN/BOLD/NC) + helpers de logging: log_info, log_success, log_warn, log_error, die, banner (con caja doble línea cyan)
+  * Constantes de rutas: INSTALL_DIR=/Applications/KioskoApp, APP_DIR, PRISMA_DIR, DATA_DIR, KEYS_DIR, LOGS_DIR, ENV_FILE, RUNTIME_SCRIPT, LICENSE_SERVER_BIN, DB_PATH=$DATA_DIR/custom.db, LICENSE_DB_PATH=$DATA_DIR/license-server.db, PLIST_PATH=/Library/LaunchDaemons/com.kioskoapp.plist, PLIST_LABEL=com.kioskoapp
+  * Captura temprana de rutas absolutas a binarios: BUN_BIN=$(command -v bun || true), NODE_BIN=$(command -v node || true) — capturadas ANTES de cualquier sudo para evitar problemas de PATH bajo sudo
+  * SUDO_REFRESH_PID para mantener sudo activo en background (cada 60s) — limpieza via trap EXIT
+  * Paso 1/8 preflight: uname -s == Darwin, node instalado (sugerencia brew install node + URL Homebrew), bun instalado (sugerencia curl bun.sh/install + source ~/.zshrc), openssl disponible, rsync disponible, launchctl disponible
+  * Paso 2/8 ensure_sudo: sudo -v (pide contraseña si expiró), background loop ( while true; do sudo -n true 2>/dev/null || true; sleep 60; done ) & para refrescar, captura PID para cleanup
+  * Paso 3/8 detect_source: SCRIPT_DIR=$(cd dirname BASH_SOURCE && pwd), busca candidatos con app/ + license-server + prisma/schema.prisma + scripts/kiosko-runtime.sh en $SCRIPT_DIR y $SCRIPT_DIR/.. (maneja tanto si el script vive en scripts/ dentro del tarball como si se ejecuta desde la raíz)
+  * Paso 4/8 copy_files: sudo mkdir -p de la estructura completa, sudo rsync -a --delete de app/ (excluyendo .git, *.log, .DS_Store), sudo cp license-server + chmod 755, sudo cp prisma/schema.prisma, sudo cp scripts/kiosko-runtime.sh + chmod 755, copia opcional de README-INSTALACION.txt, chown -R root:admin + chmod u+rwX,g+rwX,o+rX
+  * Paso 5/8 generate_keys: si keys/private.pem existe NO se regenera (preserva licencias emitidas en reinstalaciones); openssl genpkey -algorithm Ed25519 → private.pem (chmod 600, root:admin); openssl pkey -in private.pem -pubout → public.pem (chmod 644) en formato SPKI PEM (el que crypto.createPublicKey espera); copia public.pem a app/src/lib/license-public-key.pem (candidato 1 de license.ts) Y a app/license-public-key.pem (candidato 3 fallback) para máxima robustez
+  * Paso 6/8 create_env: genera admin_key=$(openssl rand -hex 16) y cookie_secret=$(openssl rand -hex 32); respalda kiosko.env existente como .bak.<timestamp>; escribe via sudo tee con heredoc SIN quote (expande $DB_PATH, $admin_key, $cookie_secret): DATABASE_URL=file:DB_PATH, PORT=3000, NODE_ENV=production, HOSTNAME=0.0.0.0, LICENSE_SERVER_URL=http://localhost:3042, LICENSE_ADMIN_API_KEY=kiosko-admin-secret-2025 (hardcoded en el binario, documentado con comentario explicativo), ADMIN_API_KEY=<random 32 hex>, LICENSE_COOKIE_SECRET=<random 64 hex>; chmod 600 root:admin
+  * Paso 7/8 init_db: sudo touch DB_PATH + chown root:admin + chmod 664; crea LICENSE_DB_PATH si no existe; crea symlink /Applications/KioskoApp/data.db → data/license-server.db (porque el binario busca data.db en import.meta.dir; el symlink dirige a nuestra ubicación limpia en data/ para backups); prisma db push: sudo env DATABASE_URL=file:DB_PATH $BUN_BIN x prisma db push --schema PRISMA_DIR/schema.prisma --accept-data-loss (usa 'sudo env' porque macOS sudo no permite 'sudo VAR=... cmd' por defecto); llama a seed_super_admin
+  * Sub-paso seed_super_admin: escribe /Applications/KioskoApp/app/seed-super-admin.ts via sudo tee con heredoc CITADO ('TS') para preservar template literals ${now} del TS; el script TS usa bun:sqlite (built-in), node:crypto.randomUUID, y dynamic await import('bcryptjs') con try/catch para mensaje claro si falta; upsert rol "Super Administrador" con 18 permisos JSON-stringificados; upsert usuario dubiel con bcrypt hash rounds=10, name=Dubiel, email=dubiel@kioskoapp.com, roleId; verificación post-seed (query JOIN User+Role); ejecución: sudo env KIOSKO_DB_PATH=DB_PATH $BUN_BIN seed_script — Bun resuelve bcryptjs desde app/node_modules (script vive en app/)
+  * Paso 8/8 setup_launchd: sudo launchctl unload (si ya cargado, para reinstalaciones); construye path_env con /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin + dir de bun + dir de node; escribe plist via sudo tee con heredoc: Label=com.kioskoapp, ProgramArguments=[/Applications/KioskoApp/kiosko-runtime.sh], WorkingDirectory=/Applications/KioskoApp, EnvironmentVariables={PATH, HOME=/var/root}, RunAtLoad=true, KeepAlive=true, ThrottleInterval=10, StandardOutPath=logs/launchd.out.log, StandardErrorPath=logs/launchd.err.log; chown root:wheel + chmod 644; sudo launchctl load -w; sleep 3 + verificación sudo launchctl list | grep com.kioskoapp
+  * Banner final con caja verde doble: ubicación, URLs (http://localhost:3000 + http://localhost:3042/api/health), credenciales dubiel/admin con warning en rojo de cambiar password, archivos importantes (app, DBs, claves, prisma, env, runtime, logs), comandos de gestión (launchctl list/unload/load/kickstart/tail), mención del uninstall script, RECORDATORIO en amarillo de que se debe activar licencia en primer arranque (LicenseGate bloquea todo hasta activación)
+  * Validado: bash -n pasa sin errores; el TS embebido compila limpio bajo bun build --target=bun (verificado con bun disponible en sandbox)
+- Creado /home/z/my-project/scripts/uninstall-macos.sh (~290 líneas, 13KB, ejecutable, chmod +x):
+  * Mismo estilo de logging/colores que install
+  * Parseo de args: -y/--yes (no-interactivo), --keep-data (no borrar INSTALL_DIR), --backup-dir DIR (default ~/Desktop), -h/--help (muestra header del script)
+  * check_root: id -u == 0 (die si no), detecta SUDO_USER y resuelve su HOME real via dscl (macOS no tiene getent) para guardar backups en el Desktop del usuario real, no /var/root
+  * stop_service: si launchctl list tiene com.kioskoapp → sudo launchctl unload; matanza defensiva de procesos huérfanos: pgrep -f kiosko-runtime.sh, license-server, app/server.js con SIGTERM luego SIGKILL
+  * remove_plist: rm -f /Library/LaunchDaemons/com.kioskoapp.plist (con guard si no existe)
+  * backup_db: confirm() default-y para hacer backup; usa sqlite3 .backup (snapshot consistente) si disponible, fallback a cp; respalda custom.db → kioskoapp-backup-YYYYMMDD.db y license-server.db → kioskoapp-license-server-backup-YYYYMMDD.db en $BACKUP_DIR; chown al usuario real
+  * remove_install_dir: triple confirmación — primer prompt default-n, si detecta keys/private.pem segundo prompt con warning rojo de invalidación de licencias; si el usuario elige preservar claves, hace backup de keys/ a $BACKUP_DIR/kioskoapp-keys-backup-YYYYMMDD/ y borra todo lo demás (find ... ! -name keys -exec rm -rf); si el usuario confirma borrar todo, rm -rf INSTALL_DIR
+  * Banner final con resumen de estado (preservado/eliminado) + comando para reinstalar
+- chmod +x aplicado a ambos scripts.
+- bash -n (syntax check) pasó para ambos. shellcheck no disponible en el sandbox.
+- Verificado con bun build --target=bun que el TypeScript embebido en install-macos.sh (heredoc <<'TS') compila limpio sin errores de sintaxis ni tipos.
+
+Stage Summary:
+- Archivos creados:
+  * /home/z/my-project/scripts/install-macos.sh (27KB, ejecutable, ~665 líneas)
+  * /home/z/my-project/scripts/uninstall-macos.sh (13KB, ejecutable, ~290 líneas)
+- Decisiones clave:
+  1. Layout de instalación honra el spec del task (data/ y keys/ como subdirectorios) PERO el binario license-server busca data.db en import.meta.dir (= /Applications/KioskoApp). Solución: symlink /Applications/KioskoApp/data.db → data/license-server.db. SQLite sigue el symlink y crea -wal/-shm junto al target (en data/), manteniendo el layout limpio para backups. La clave privada SÍ cae naturalmente en keys/private.pem (= import.meta.dir + "keys/private.pem"), sin symlink necesario.
+  2. ADMIN_API_KEY / LICENSE_ADMIN_API_KEY: el binario license-server tiene la clave hardcoded como 'kiosko-admin-secret-2025' en compile-time. Para que el panel super-admin de la app pueda hablar con el license-server, AMBOS lados deben usar la misma clave. Por eso kiosko.env setea LICENSE_ADMIN_API_KEY=kiosko-admin-secret-2025 (documentado con comentario explicativo). Se genera ADEMÁS un ADMIN_API_KEY aleatorio de 32 hex chars (per spec del task) para uso futuro si se recompila el binario para leer de env. LICENSE_COOKIE_SECRET se genera aleatorio de 64 hex chars (env-overridable en src/lib/license-secret.ts).
+  3. Clave pública Ed25519: se copia en DOS ubicaciones para máxima robustez — app/src/lib/license-public-key.pem (candidato 1 en license.ts, ruta canónica del repo) y app/license-public-key.pem (candidato 3, fallback en raíz del cwd). Ambas apuntan al mismo contenido SPKI PEM producido por `openssl pkey -pubout`.
+  4. Seed del super-admin: script TS embebido vía heredoc <<'TS' (quoted, preserva template literals). Vive en /Applications/KioskoApp/app/seed-super-admin.ts para que Bun resuelva bcryptjs desde app/node_modules (parte del standalone build porque src/lib/auth.ts lo importa). Usa bun:sqlite (built-in, no deps) + dynamic await import('bcryptjs') con try/catch para mensaje claro si falta. Crea/upsert rol "Super Administrador" (18 permisos) + usuario dubiel/admin (bcrypt rounds=10). Se deja el archivo en app/ tras instalación (útil para resetear password manualmente).
+  5. Prisma db push: se ejecuta con 'sudo env DATABASE_URL=... bun x prisma db push --schema ...' — el 'sudo env' es crucial porque macOS sudo por default NO permite 'sudo VAR=value cmd' (setenv disabled). bun x prisma (bunx) descarga prisma CLI si no está en node_modules.
+  6. LaunchDaemon (no LaunchAgent): se usa /Library/LaunchDaemons/com.kioskoapp.plist (corre como root al boot del sistema, no al login de usuario) — apropiado para un servidor POS que debe estar disponible 24/7 sin sesión interactiva. Plist con RunAtLoad=true, KeepAlive=true (restart on crash), ThrottleInterval=10 (evita restart loops), WorkingDirectory=/Applications/KioskoApp, EnvironmentVariables con PATH amplio (incluye /opt/homebrew/bin para Apple Silicon y /usr/local/bin para Intel, más dirs de bun y node detectados al inicio).
+  7. Sudo refresh en background: el instalador puede tardar varios minutos (rsync de app/, prisma db push, seed). macOS sudo expira el timestamp a los 5 min por default. Se lanza un subshell background que hace sudo -n true cada 60s para mantenerlo vivo, con cleanup via trap EXIT.
+  8. UI text y comentarios en español (el app es en español). Colores: verde éxito, amarillo warnings, rojo errores, cyan info/pasos, bold para headers.
+- Credenciales creadas por el installer: dubiel / admin (super-admin, con warning en rojo de cambiar password en primer login).
+- Recordatorio incluido en el banner final: la app mostrará LicenseGate hasta que se active una licencia (sistema L1+L2+L3 completo desde LIC-1/LIC-2). Hasta entonces, todas las rutas excepto /api/license/* y /api/auth/* devuelven 503 license_required.
+- Ambos scripts validados con bash -n (syntax OK) y el TS embebido con bun build --target=bun (compila limpio). No se ejecutaron end-to-end porque requieren macOS real + tarball con app/ y license-server compilados (no disponible en este sandbox Linux).
+- PRÓXIMO PASO: empaquetar app/ (standalone build), license-server (binario Bun compilado), prisma/schema.prisma, scripts/kiosko-runtime.sh, scripts/install-macos.sh, scripts/uninstall-macos.sh, README-INSTALACION.txt dentro de kioskoapp-installer.tar.gz para distribución. Mismo empaquetado que INSTALL-LINUX pero con los scripts macOS en lugar de los Linux.
