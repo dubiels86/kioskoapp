@@ -799,3 +799,39 @@ Stage Summary:
 - Instalación en 1 comando: sudo ./install.sh
 - Credenciales iniciales: dubiel / admin (cambiar inmediatamente)
 - Claves Ed25519 se generan en la PC destino (privada NUNCA sale de ahí)
+
+---
+Task ID: CLEAN-1
+Agent: Main Agent
+Task: Limpiar historial de git de binarios grandes para que el clone sea estable (error: RPC failed; curl 92 HTTP/2 stream was not closed cleanly)
+
+Work Log:
+- Diagnóstico: .git pesaba 455MB por binarios grandes tracked en múltiples commits:
+  * 7 versiones de public/kiosko-app.tar.gz (~60MB c/u)
+  * public/project.tar.gz (15MB)
+  * mini-services/license-server/data.db-wal (varias versiones)
+  * db/custom.db.backup-* y db/*.old-backup
+  * screenshots PNG (~100KB-400KB c/u, múltiples)
+  * skills/ (~20MB con binarios como tectonic)
+- Instalado git-filter-repo via pip3 (git-filter-repo 2.47.0)
+- Actualizado .gitignore para excluir todos los binarios y assets grandes:
+  * public/*.tar.gz, public/kioskoapp-installer*.tar.gz, public/version.json
+  * db/*.backup-*, db/*.old-backup, db/backups/
+  * mini-services/license-server/data.db*
+  * skills/, *.png, *.jpg, *.jpeg
+- Ejecutado git filter-repo --invert-paths con todos los path-globs de archivos a remover del historial completo
+  * filter-repo reescribió los 59 commits, removiendo los binarios de TODA la historia
+  * filter-repo removió automáticamente el remote 'origin' (comportamiento esperado)
+- Removido también db/custom.db del tracking (se inicializa vacía en cada instalación)
+- Re-agregado remote origin: https://github.com/dubiels86/kioskoapp.git
+- Force push exitoso: a403601 (58 commits, 245 archivos tracked)
+- Verificación: SHA local = SHA remoto = a403601ce42ee4177a58d23531743179bb99fd0e
+
+Stage Summary:
+- .git reducido de 455MB → 1.2MB (reducción del 99.74%)
+- 58 commits preservados con toda la historia de desarrollo
+- 245 archivos tracked (sistema de licencia completo, scripts, prisma schema, mini-services/license-server/index.ts, etc.)
+- Excluidos del tracking: binarios .tar.gz, DBs, screenshots, skills/, tool-results/, agent-ctx/
+- Clone del repo ahora será rápido y estable (~1.2MB en vez de 455MB)
+- GitHub actualizado con force push (a403601)
+- El usuario puede ahora hacer git clone sin el error de HTTP/2 stream CANCEL
