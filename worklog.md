@@ -835,3 +835,31 @@ Stage Summary:
 - Clone del repo ahora será rápido y estable (~1.2MB en vez de 455MB)
 - GitHub actualizado con force push (a403601)
 - El usuario puede ahora hacer git clone sin el error de HTTP/2 stream CANCEL
+
+---
+Task ID: LICENSE-BOOTSTRAP
+Agent: Main Agent
+Task: Hacer que el sistema de licencia sea auto-bootstrap en un `git clone` fresco (claves .pem están en .gitignore, así que faltan en cualquier PC nueva) y crear un script para emitir/mostrar licencias fácilmente.
+
+Work Log:
+- Diagnóstico: `*.pem` está en .gitignore → ni `mini-services/license-server/keys/private.pem` ni `src/lib/license-public-key.pem` se commitean. En un clone fresco el license-server crasheaba en `fs.readFileSync(PRIVATE_KEY_PATH)` y el cliente lanzaba "License public key not loaded".
+- Modificado `mini-services/license-server/index.ts`:
+  * Agregada función `ensureKeypair()` que detecta si falta `keys/private.pem`, y en ese caso genera un keypair Ed25519 nuevo con `crypto.generateKeyPairSync("ed25519")`, escribe `keys/private.pem` (0600) y `keys/public.pem` (0644).
+  * Agregada función `syncClientPublicKey()` que copia `keys/public.pem` → `src/lib/license-public-key.pem` (path del cliente) automáticamente en cada arranque si el contenido difiere.
+  * Reemplazada la carga directa `crypto.createPrivateKey(fs.readFileSync(...))` por `ensureKeypair()` primero, luego carga normal.
+- Creado `mini-services/license-server/issue-license.ts`: CLI que llama POST /api/issue con X-Admin-Key y muestra el JSON de la licencia listo para copiar/pegar en la pantalla de activación. Flags: --customer, --plan, --maxDevices, --days, --features.
+- Verificado end-to-end en sandbox:
+  * license-server arrancó, detectó claves faltantes, las generó y sincronizó a src/lib/.
+  * `bun issue-license.ts --customer "Dubiel" --plan pro --maxDevices 2 --days 365` emitió licencia ed509593-... con firma Ed25519 válida.
+- Lint: 4 errores preexistentes en src/components/pos/simple-payment-dialog.tsx (react-hooks/set-state-in-effect), NO relacionados con estos cambios. Sin errores nuevos.
+
+Stage Summary:
+- Sistema de licencia ahora es self-bootstrapping: en un `git clone` fresco, solo hace falta arrancar el license-server (`cd mini-services/license-server && bun run dev`) y las claves Ed25519 se crean solas.
+- Flujo completo para activar en una PC nueva:
+  1. `bun run db:push` (crea db/custom.db — resolver error iCloud moviendo repo fuera de ~/Documents)
+  2. `cd mini-services/license-server && bun run dev` (genera claves + arranca en :3042)
+  3. En otra terminal: `bun mini-services/license-server/issue-license.ts --customer "TuNombre" --plan pro --days 365`
+  4. Copiar el JSON impreso entre las líneas
+  5. `bun run dev` en la raíz, abrir la app, pegar el JSON en la pantalla de activación
+- Clave admin por defecto: `kiosko-admin-secret-2025` (rotar en producción)
+- Archivos nuevos/modificados: mini-services/license-server/index.ts, mini-services/license-server/issue-license.ts

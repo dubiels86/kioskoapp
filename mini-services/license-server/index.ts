@@ -34,8 +34,90 @@ const PORT = 3042;
  */
 const ADMIN_API_KEY = "kiosko-admin-secret-2025";
 
-const PRIVATE_KEY_PATH = path.resolve(import.meta.dir, "keys/private.pem");
+const KEYS_DIR = path.resolve(import.meta.dir, "keys");
+const PRIVATE_KEY_PATH = path.join(KEYS_DIR, "private.pem");
+const PUBLIC_KEY_PATH = path.join(KEYS_DIR, "public.pem");
+/**
+ * Path where the KioskoApp CLIENT expects the public key
+ * (`<repo-root>/src/lib/license-public-key.pem`). Resolved relative to this
+ * mini-service so it works whether the repo is run from source or from the
+ * standalone build.
+ */
+const CLIENT_PUBLIC_KEY_PATHS = [
+  path.resolve(import.meta.dir, "../../src/lib/license-public-key.pem"),
+  path.resolve(process.cwd(), "src/lib/license-public-key.pem"),
+];
 const DB_PATH = path.resolve(import.meta.dir, "data.db");
+
+/**
+ * Ensure an Ed25519 keypair exists at startup. If `keys/private.pem` is
+ * missing (e.g. on a fresh `git clone`), generate a new keypair, write the
+ * private key to `keys/private.pem` (0600) and the public key to BOTH
+ * `keys/public.pem` and `src/lib/license-public-key.pem` (so the client app
+ * can verify licenses signed by this server).
+ *
+ * This makes the system self-bootstrapping on a new machine: just start the
+ * license-server and the keys are created automatically.
+ */
+function ensureKeypair(): void {
+  if (fs.existsSync(PRIVATE_KEY_PATH)) {
+    // Keypair already present. Make sure the client-side public key file also
+    // exists (it might have been deleted or never copied on a fresh clone).
+    if (!fs.existsSync(PUBLIC_KEY_PATH)) {
+      // Re-export the public key from the existing private key.
+      const priv = crypto.createPrivateKey(fs.readFileSync(PRIVATE_KEY_PATH, "utf8"));
+      const pubPem = crypto.createPublicKey(priv).export({ type: "spki", format: "pem" });
+      fs.writeFileSync(PUBLIC_KEY_PATH, pubPem, { mode: 0o644 });
+    }
+    syncClientPublicKey();
+    return;
+  }
+
+  fs.mkdirSync(KEYS_DIR, { recursive: true });
+  console.log("[keys] No Ed25519 keypair found. Generating a new one...");
+
+  // Generate Ed25519 keypair.
+  const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519");
+
+  const privPem = privateKey.export({ type: "pkcs8", format: "pem" });
+  const pubPem = publicKey.export({ type: "spki", format: "pem" });
+
+  fs.writeFileSync(PRIVATE_KEY_PATH, privPem, { mode: 0o600 });
+  fs.writeFileSync(PUBLIC_KEY_PATH, pubPem, { mode: 0o644 });
+
+  console.log(`[keys] Private key written to ${PRIVATE_KEY_PATH}`);
+  console.log(`[keys] Public key  written to ${PUBLIC_KEY_PATH}`);
+
+  syncClientPublicKey();
+}
+
+/**
+ * Copy `keys/public.pem` → `src/lib/license-public-key.pem` so the KioskoApp
+ * client can verify licenses signed by this server. No-op if the source is
+ * missing. Writes to every candidate path that exists or can be created.
+ */
+function syncClientPublicKey(): void {
+  if (!fs.existsSync(PUBLIC_KEY_PATH)) return;
+  const pubPem = fs.readFileSync(PUBLIC_KEY_PATH, "utf8");
+  for (const candidate of CLIENT_PUBLIC_KEY_PATHS) {
+    try {
+      // Only write if the directory exists (don't create arbitrary dirs).
+      const dir = path.dirname(candidate);
+      if (fs.existsSync(dir)) {
+        // Skip if the file already has the exact same content (avoid touching
+        // mtime on every boot).
+        if (fs.existsSync(candidate)) {
+          const current = fs.readFileSync(candidate, "utf8");
+          if (current === pubPem) continue;
+        }
+        fs.writeFileSync(candidate, pubPem, { mode: 0o644 });
+        console.log(`[keys] Synced public key → ${candidate}`);
+      }
+    } catch (err) {
+      console.warn(`[keys] Could not sync public key to ${candidate}:`, err);
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,6 +210,8 @@ function canonicalLicenseForm(fields: Omit<LicensePayload, "signature">): string
 // Signing
 // ---------------------------------------------------------------------------
 
+// Bootstrap the keypair on first run, then load the private key for signing.
+ensureKeypair();
 const privateKey = crypto.createPrivateKey(
   fs.readFileSync(PRIVATE_KEY_PATH, "utf8"),
 );
