@@ -127,6 +127,22 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
   const [deactivating, setDeactivating] = useState(false)
   const [ensuringCookie, setEnsuringCookie] = useState(false)
   const [issuingTrial, setIssuingTrial] = useState(false)
+  // Auth state: only a logged-in super admin (permission `settings.all`) can
+  // issue a trial license with one click. Anonymous users must paste a license
+  // JSON they received from an admin.
+  const [authUser, setAuthUser] = useState<{
+    username: string
+    name: string
+    permissions: string[]
+  } | null>(null)
+  const [authChecked, setAuthChecked] = useState(false)
+  // Inline login form state (shown inside the gate when not super admin).
+  const [showLoginForm, setShowLoginForm] = useState(false)
+  const [loginUsername, setLoginUsername] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const isSuperAdmin = !!authUser && authUser.permissions.includes('settings.all')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -150,6 +166,39 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshStatus()
   }, [refreshStatus])
+
+  // Check if the user is already logged in (e.g., the admin opened the app
+  // in a tab where they had a previous session). This lets us show the trial
+  // button immediately without forcing them to log in again.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/auth/session', { credentials: 'same-origin' })
+        const data = (await res.json().catch(() => null)) as {
+          authenticated?: boolean
+          user?: { username: string; name: string; permissions: string[] }
+        } | null
+        if (cancelled) return
+        if (data?.authenticated && data.user) {
+          setAuthUser({
+            username: data.user.username,
+            name: data.user.name,
+            permissions: data.user.permissions,
+          })
+        } else {
+          setAuthUser(null)
+        }
+      } catch {
+        if (!cancelled) setAuthUser(null)
+      } finally {
+        if (!cancelled) setAuthChecked(true)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // When the license is active/grace, ensure the gate cookie is present in the
   // browser before rendering the children. A fresh browser session has no
@@ -315,6 +364,45 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoginError('')
+    if (!loginUsername.trim() || !loginPassword) {
+      setLoginError('Ingrese usuario y contraseña')
+      return
+    }
+    setLoginLoading(true)
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ username: loginUsername.trim(), password: loginPassword }),
+      })
+      const data = (await res.json().catch(() => null)) as {
+        user?: { username: string; name: string; permissions: string[] }
+        error?: string
+      } | null
+      if (!res.ok || !data?.user) {
+        setLoginError(data?.error || 'Error al iniciar sesión')
+        return
+      }
+      setAuthUser({
+        username: data.user.username,
+        name: data.user.name,
+        permissions: data.user.permissions,
+      })
+      setShowLoginForm(false)
+      setLoginUsername('')
+      setLoginPassword('')
+      toast.success(`Bienvenido, ${data.user.name}`)
+    } catch {
+      setLoginError('Error de conexión. Intente nuevamente.')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
   // ----- Render -----
   if (status === 'loading') {
     return (
@@ -434,36 +522,61 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
           {/* Activation form */}
           {needsActivation && (
             <div className="space-y-3">
-              {/* One-click trial activation — the recommended path for a fresh
-                  install where the license-server is running locally. */}
-              <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
-                  <div className="text-sm text-emerald-200">
-                    <strong className="text-emerald-100">Activación rápida:</strong> emitir una
-                    licencia de prueba de 30 días para este equipo automáticamente (requiere el
-                    servidor de licencias corriendo).
+              {/* One-click trial activation — ONLY available to a logged-in
+                  super admin (permission `settings.all`). Anonymous users must
+                  log in first or paste a license JSON they received. */}
+              {isSuperAdmin ? (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Zap className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
+                    <div className="text-sm text-emerald-200">
+                      <strong className="text-emerald-100">
+                        Activación rápida (super admin):
+                      </strong>{' '}
+                      emitir una licencia de prueba de 30 días para este equipo
+                      automáticamente. Conectado como{' '}
+                      <strong className="text-emerald-100">{authUser?.name}</strong>.
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleIssueTrial}
+                    disabled={issuingTrial || activating}
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                  >
+                    {issuingTrial ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Emitiendo y activando...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Emitir licencia de prueba para este equipo
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : authChecked ? (
+                /* Not a super admin: show a notice that they must log in as
+                   super admin to use the 1-click trial, or paste a license. */
+                <div className="bg-slate-800/40 border border-slate-700/40 rounded-lg p-4 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-amber-400" />
+                    <div className="text-sm text-slate-300">
+                      <strong className="text-slate-100">
+                        Activación rápida restringida
+                      </strong>
+                      <p className="mt-1 text-slate-400">
+                        Solo un <strong>super administrador</strong> puede emitir
+                        licencias de prueba desde la app. Iniciá sesión con tu
+                        cuenta de super admin abajo, o pegá una licencia existente
+                        que te haya entregado el proveedor.
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  onClick={handleIssueTrial}
-                  disabled={issuingTrial || activating}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
-                >
-                  {issuingTrial ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Emitiendo y activando...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Emitir licencia de prueba para este equipo
-                    </>
-                  )}
-                </Button>
-              </div>
+              ) : null}
 
               {/* Divider */}
               <div className="flex items-center gap-3 py-1">
@@ -554,6 +667,90 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
               </Button>
             )}
           </div>
+
+          {/* Inline login form — shown when the user is not a super admin and
+              clicks "Iniciar sesión como super admin". Lets them authenticate
+              WITHOUT leaving the activation screen, so they can then use the
+              1-click trial button. */}
+          {needsActivation && !isSuperAdmin && authChecked && (
+            <div className="space-y-2">
+              {!showLoginForm ? (
+                <Button
+                  type="button"
+                  onClick={() => setShowLoginForm(true)}
+                  variant="outline"
+                  className="w-full bg-slate-800/50 border-slate-700/50 text-slate-200 hover:bg-slate-700/50 hover:text-white"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Iniciar sesión como super admin
+                </Button>
+              ) : (
+                <form onSubmit={handleLogin} className="space-y-3 bg-slate-800/40 border border-slate-700/40 rounded-lg p-4">
+                  <div className="text-sm font-medium text-slate-200">
+                    Iniciar sesión como super admin
+                  </div>
+                  {loginError && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded px-3 py-2 text-xs text-red-300">
+                      {loginError}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lic-login-user" className="text-xs text-slate-400">
+                      Usuario
+                    </Label>
+                    <input
+                      id="lic-login-user"
+                      type="text"
+                      value={loginUsername}
+                      onChange={(e) => { setLoginUsername(e.target.value); setLoginError('') }}
+                      disabled={loginLoading}
+                      autoComplete="username"
+                      className="w-full rounded bg-slate-900/50 border border-slate-700/50 text-white px-3 py-2 text-sm focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lic-login-pass" className="text-xs text-slate-400">
+                      Contraseña
+                    </Label>
+                    <input
+                      id="lic-login-pass"
+                      type="password"
+                      value={loginPassword}
+                      onChange={(e) => { setLoginPassword(e.target.value); setLoginError('') }}
+                      disabled={loginLoading}
+                      autoComplete="current-password"
+                      className="w-full rounded bg-slate-900/50 border border-slate-700/50 text-white px-3 py-2 text-sm focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      disabled={loginLoading}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm"
+                    >
+                      {loginLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                          Ingresando...
+                        </>
+                      ) : (
+                        'Ingresar'
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => { setShowLoginForm(false); setLoginError(''); setLoginPassword('') }}
+                      disabled={loginLoading}
+                      variant="ghost"
+                      className="text-slate-400 hover:text-slate-200 text-sm"
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
 
           {/* Help footer */}
           <div className="flex items-start gap-2 bg-slate-800/30 border border-slate-700/30 rounded-lg px-4 py-3 text-xs text-slate-400">

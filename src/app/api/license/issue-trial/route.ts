@@ -8,6 +8,7 @@ import {
 } from '@/lib/license'
 import { LICENSE_ADMIN_API_KEY } from '@/lib/license-admin'
 import { setLicenseResponseCookie } from '@/lib/license-cookie'
+import { getSessionUser } from '@/lib/auth'
 
 /**
  * POST /api/license/issue-trial
@@ -16,23 +17,52 @@ import { setLicenseResponseCookie } from '@/lib/license-cookie'
  * license-server to be reachable on localhost:3042 (which it is, by design,
  * in a normal KioskoApp deployment — both services run on the same box).
  *
+ * 🔒 REQUIRES an authenticated super-admin session (permission `settings.all`).
+ * Anonymous users CANNOT issue trial licenses — they must either log in as
+ * super admin or paste a license JSON that was issued by an admin.
+ *
  * Flow:
+ *   0. Verify the caller is a logged-in super admin (permission `settings.all`).
  *   1. Ask the license-server to ISSUE a brand-new trial license bound to
  *      this machine's hostname. The admin key is sent server-to-server only.
  *   2. Immediately ACTIVATE that license for this machine's fingerprint.
  *   3. Persist the activation in the local DB and set the gate cookie.
  *
- * This endpoint is safe to expose because:
+ * This endpoint is safe because:
+ *   - Only authenticated super admins can call it.
  *   - It only ever issues TRIAL licenses (plan = "trial"), never pro/enterprise.
  *   - It binds to the current machine's fingerprint (maxDevices = 1).
  *   - It expires in 30 days by default (max 365).
- *   - The admin key is never sent to the browser.
+ *   - The license-server admin key is never sent to the browser.
  *
  * Body (all optional, sensible defaults):
  *   { customer?: string, days?: number }
  */
 export async function POST(request: Request) {
   try {
+    // 0) Require an authenticated super-admin session.
+    const user = await getSessionUser()
+    if (!user) {
+      return NextResponse.json(
+        {
+          ok: false,
+          status: 'unauthorized',
+          message: 'Debe iniciar sesión como super administrador para emitir una licencia.',
+        },
+        { status: 401 }
+      )
+    }
+    if (!user.permissions.includes('settings.all' as never)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          status: 'forbidden',
+          message: 'Solo un super administrador puede emitir licencias de prueba.',
+        },
+        { status: 403 }
+      )
+    }
+
     const body = (await request.json().catch(() => ({}))) as {
       customer?: string
       days?: number

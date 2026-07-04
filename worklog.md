@@ -1032,3 +1032,40 @@ Stage Summary:
   que le dirá exactamente qué pasa y cómo arreglarlo.
 - Fix limpio si hay mismatch real: borrar keys/, data.db y src/lib/license-public-key.pem, arrancar el license-server (regenera todo), luego emitir licencia nueva.
 - Archivo nuevo: mini-services/license-server/diagnostico-keys.ts (no se commitea aún; el usuario lo tiene disponible en su working tree si hizo pull, o puede crearlo copiando del sandbox).
+
+---
+Task ID: VERIFY-ADMIN-TRIAL
+Agent: general-purpose (browser verification)
+Task: Verify the admin-only trial button works end-to-end via Playwright
+
+Work Log:
+- Leí el worklog y el componente src/components/license/license-gate.tsx para entender el cambio: el botón verde "Emitir licencia de prueba para este equipo" ahora está detrás de isSuperAdmin (authUser.permissions.includes('settings.all')). Para usuarios anónimos se muestra un aviso "Activación rápida restringida" y un botón "Iniciar sesión como super admin" que abre un formulario inline (campos #lic-login-user y #lic-login-pass) que hace POST /api/auth/login.
+- Escribí script de Playwright en /home/z/verify-admin-trial/verify.py (chromium headless, 1280x900) que ejecuta el flujo completo: navegar → screenshot anónimo → verificar botón trial ausente + aviso presente + botón login presente → clic en login → verificar formulario inline → llenar dubiel/admin + Ingresar → esperar botón trial → screenshot logueado → clic en trial → esperar detach de la card → screenshot final. Captura console errors, page errors y request failures.
+- Escribí orquestador en /home/z/verify-admin-trial/run.sh: arranca license-server (bun run dev en :3042) y Next.js (bun run dev en :3000) en background con bun, espera a que ambos respondan, duerme 15s extra para el primer compile, llama a POST /api/license/deactivate para asegurar estado unlicensed, luego corre el verifier, y trap en EXIT/INT/TERM mata ambos PIDs (incluye pkill -P para hijos de bun y SIGKILL de respaldo). Todo en un solo bash persistente (sandbox mata procesos entre llamadas bash separadas).
+- Ejecuté el orquestador. Resultados:
+  * license-server levantó en 2s, Next.js en 6s.
+  * POST /api/license/deactivate → 200 {"ok":true,"message":"Licencia desactivada correctamente."}
+  * GET /api/license/status → {"status":"unlicensed","license":null,"fingerprint":"054654b430..."}
+  * Playwright navegó a http://localhost:3000/, esperó `h1:has-text('Activación de Licencia Requerida')` → visible.
+  * Screenshot 01_anonymous.png (357KB): verifiqué get_by_role("button", name="Emitir licencia de prueba para este equipo").count() == 0 → botón NO visible para anónimo. ✅
+  * get_by_text("Activación rápida restringida").is_visible() == True. ✅
+  * get_by_role("button", name="Iniciar sesión como super admin").is_visible() == True. ✅
+  * Clic en "Iniciar sesión como super admin" → form inline apareció (esperé #lic-login-pass). ✅
+  * Llené dubiel/admin + clic en "Ingresar". POST /api/auth/login → 200 (Next.js log). Esperé botón trial → apareció. ✅
+  * Screenshot 02_logged_in.png (340KB): botón trial visible, y la caja esmeralda contiene "Conectado como Dubiel" (verificado por inner_text del div.bg-emerald-500/10 + también por body_text). ✅
+  * Clic en el botón verde. POST /api/license/issue-trial → 200. license-server log: POST /api/issue -> 201 (trial 30d), POST /api/activate -> 201 (1/1 dispositivos), POST /api/heartbeat -> 200. Esperé detach del h1 → ocurrió. ✅
+  * Screenshot 03_after_activation.png (322KB): card de activación desmontada, app principal renderizada. card_still_visible_after_click == False. ✅
+- Errores de consola: exactamente 2, ambos "Failed to load resource: the server responded with a status of 401 (Unauthorized)". Corresponden a los 2 GET /api/auth/session que devuelve 401 para usuarios anónimos (documentado en src/app/api/auth/session/route.ts línea 8 — comportamiento esperado cuando no hay usuario logueado). NO afectan el flujo. Después del login no se repiten (la sesión queda autenticada).
+- Page errors (excepciones JS no capturadas): 0.
+- Request failures (fallos de red): 0.
+
+Stage Summary:
+- Resultado: PASS
+- Verificado end-to-end con Playwright/Chromium:
+  1. Usuario anónimo: NO ve el botón verde "Emitir licencia de prueba para este equipo" (count=0). Sí ve el aviso "Activación rápida restringida" y el botón "Iniciar sesión como super admin".
+  2. Clic en "Iniciar sesión como super admin" abre el formulario inline (usuario + contraseña) sin salir de la pantalla de activación.
+  3. Login con dubiel/admin → 200, la caja esmeralda con el botón verde aparece y muestra "Conectado como Dubiel".
+  4. Clic en el botón verde → POST /api/license/issue-trial 200 → licencia trial emitida y activada (license-server: issue 201 + activate 201 1/1) → la card de activación se desmonta y se renderiza la app principal.
+- Errores de consola: solo 2x 401 de /api/auth/session para usuario anónimo (esperado y documentado). Sin page_errors ni request_failures.
+- Artefactos guardados en /home/z/verify-admin-trial/: 01_anonymous.png, 02_logged_in.png, 03_after_activation.png, console.log, page_errors.log (vacío), request_failures.log (vacío), result.json, verify.py, run.sh, orchestrator.log, license-server.log, nextjs.log.
+- No se modificó ningún código (verificación only).
