@@ -753,3 +753,49 @@ Stage Summary:
 - Recordatorio incluido en el banner final: la app mostrará LicenseGate hasta que se active una licencia (sistema L1+L2+L3 completo desde LIC-1/LIC-2). Hasta entonces, todas las rutas excepto /api/license/* y /api/auth/* devuelven 503 license_required.
 - Ambos scripts validados con bash -n (syntax OK) y el TS embebido con bun build --target=bun (compila limpio). No se ejecutaron end-to-end porque requieren macOS real + tarball con app/ y license-server compilados (no disponible en este sandbox Linux).
 - PRÓXIMO PASO: empaquetar app/ (standalone build), license-server (binario Bun compilado), prisma/schema.prisma, scripts/kiosko-runtime.sh, scripts/install-macos.sh, scripts/uninstall-macos.sh, README-INSTALACION.txt dentro de kioskoapp-installer.tar.gz para distribución. Mismo empaquetado que INSTALL-LINUX pero con los scripts macOS en lugar de los Linux.
+
+---
+Task ID: INSTALLER-1
+Agent: Main Agent
+Task: Crear instalador distribuible sin código fuente para PC/Mac/servidor con autostart al iniciar
+
+Work Log:
+- Modificado next.config.ts: agregado output: 'standalone' para que Next.js genere build autocontenido en .next/standalone/
+- Ejecutado `bun run build` → genera .next/standalone/ con server.js + .next/ + node_modules/ mínimo (296MB inicial, incluía archivos innecesarios)
+- Compilado license-server a binario nativo con `bun build --compile` (90MB, no expone código fuente TS)
+- Creado scripts/build-installer.ts: empaquetador que limpia el standalone (elimina src/, skills/, scripts/, db/, screenshots) y genera kioskoapp-installer-v0.9.0.tar.gz (87MB final)
+- [Subagente INSTALL-MACOS] Creado scripts/install-macos.sh (665 líneas) + scripts/uninstall-macos.sh (290 líneas):
+  * Instala en /Applications/KioskoApp/
+  * Genera par de claves Ed25519 con openssl
+  * Inicializa SQLite con prisma db push + seed super-admin dubiel/admin
+  * Crea LaunchDaemon /Library/LaunchDaemons/com.kioskoapp.plist (RunAtLoad + KeepAlive)
+  * Autostart al boot del sistema (no al login de usuario) — apropiado para servidor 24/7
+- [Subagente INSTALL-LINUX] Creado scripts/install-linux.sh (640 líneas) + scripts/uninstall-linux.sh (278 líneas):
+  * Instala en /opt/kioskoapp/
+  * Crea usuario sistema `kiosko`
+  * Crea systemd service /etc/systemd/system/kioskoapp.service con hardening (NoNewPrivileges, ProtectSystem, etc.)
+  * systemctl enable + start → autostart al boot
+- [Subagente RUNTIME-SCRIPT] Creado scripts/kiosko-runtime.sh (357 líneas):
+  * Arranca license-server (:3042) + Next.js app (:3000) en background
+  * Supervisión con wait -n (bash 4.3+) o polling kill -0 (macOS bash 3.2)
+  * Trap SIGTERM/SIGINT/EXIT para shutdown limpio (SIGTERM → 5s → SIGKILL)
+  * Health checks post-startup
+- Creado README-INSTALACION.txt con instrucciones completas (requisitos, instalación, primer uso, gestión, seguridad, respaldos)
+- Creado install.sh wrapper que detecta SO y llama al instalador correcto
+- Verificación final del tarball:
+  * Tamaño: 87MB comprimido
+  * 2382 archivos
+  * 0 archivos TS/TSX expuestos (código fuente protegido)
+  * Estructura: app/ (Next.js standalone) + license-server (binario Bun) + scripts/ + prisma/ + install.sh + README
+- Subido a GitHub: commit 248c712 (force push exitoso, 9 archivos, 2952 insertions)
+
+Stage Summary:
+- Instalador distribuible completo generado en public/kioskoapp-installer-v0.9.0.tar.gz (87MB)
+- Descargable desde http://localhost:3000/kioskoapp-installer-v0.9.0.tar.gz
+- Sin código fuente expuesto (solo JS compilado y binarios nativos)
+- Autostart al boot en macOS (LaunchDaemon) y Linux (systemd)
+- 3 subagentes ejecutados en paralelo para crear los 6 scripts de instalación/desinstalación/runtime
+- Requisitos en PC destino: Node.js 20+, Bun 1.0+, openssl, sudo
+- Instalación en 1 comando: sudo ./install.sh
+- Credenciales iniciales: dubiel / admin (cambiar inmediatamente)
+- Claves Ed25519 se generan en la PC destino (privada NUNCA sale de ahí)
