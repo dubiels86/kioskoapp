@@ -55,3 +55,21 @@ server.log
 # Installer binaries (too large for GitHub, distribute separately)
 public/kioskoapp-installer*.tar.gz
 public/kiosko-src-snapshot.tar.gz
+
+# Binarios grandes (se distribuyen por separado, no en git)
+public/kiosko-app.tar.gz
+public/project.tar.gz
+public/update.tar.gz
+public/kiosko-src-snapshot.tar.gz
+public/kioskoapp-installer*.tar.gz
+public/version.json
+db/*.backup-*
+db/*.old-backup
+db/backups/
+mini-services/license-server/data.db
+mini-services/license-server/data.db-shm
+mini-services/license-server/data.db-wal
+skills/
+*.png
+*.jpg
+*.jpeg
