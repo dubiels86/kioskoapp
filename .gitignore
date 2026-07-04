@@ -73,3 +73,8 @@ skills/
 *.png
 *.jpg
 *.jpeg
+
+# Bases de datos (se inicializan vacías en cada instalación)
+db/custom.db
+db/custom.db-shm
+db/custom.db-wal
