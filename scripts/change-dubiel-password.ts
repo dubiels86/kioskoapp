@@ -28,11 +28,41 @@
 //   1) Cargar el archivo .env manualmente si existe
 //   2) Aplicar un fallback razonable si DATABASE_URL no está definida
 //   3) Recién entonces importar dinámicamente `@/lib/db`
-import { readFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync, existsSync, statSync } from 'fs'
+import { resolve, dirname, join, isAbsolute } from 'path'
 
-function loadEnvFile(dir: string = process.cwd()): void {
-  // Busca .env en el directorio dado y en los padres hasta encontrarlo.
+// --- 1) Encontrar la raíz del proyecto (donde está package.json) ---------
+// Partimos del __dirname de este script (scripts/) y subimos hasta encontrar
+// un package.json. Eso nos da el project root real, sin depender del cwd.
+function findProjectRoot(startDir: string): string {
+  let current = startDir
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(current, 'package.json'))) {
+      // Confirmamos que sea el package.json del proyecto (no de node_modules)
+      try {
+        const pkg = JSON.parse(readFileSync(join(current, 'package.json'), 'utf-8'))
+        if (pkg.name && !current.includes('node_modules')) {
+          return current
+        }
+      } catch {
+        // seguimos buscando
+      }
+    }
+    const parent = dirname(current)
+    if (parent === current) break
+    current = parent
+  }
+  // Fallback: devolvemos el startDir
+  return startDir
+}
+
+// __dirname está disponible en Bun/Node ESM con top-level await
+const PROJECT_ROOT = findProjectRoot(
+  typeof __dirname !== 'undefined' ? __dirname : process.cwd()
+)
+
+// --- 2) Cargar .env (del project root y padres) --------------------------
+function loadEnvFile(dir: string = PROJECT_ROOT): void {
   let current = dir
   for (let i = 0; i < 6; i++) {
     const envPath = resolve(current, '.env')
@@ -46,14 +76,12 @@ function loadEnvFile(dir: string = process.cwd()): void {
           if (eq === -1) continue
           const key = line.slice(0, eq).trim()
           let value = line.slice(eq + 1).trim()
-          // Quita comillas envolventes
           if (
             (value.startsWith('"') && value.endsWith('"')) ||
             (value.startsWith("'") && value.endsWith("'"))
           ) {
             value = value.slice(1, -1)
           }
-          // No sobreescribe variables ya presentes en el entorno real
           if (!(key in process.env)) {
             process.env[key] = value
           }
@@ -71,16 +99,117 @@ function loadEnvFile(dir: string = process.cwd()): void {
 
 loadEnvFile()
 
-// Fallback por defecto si nadie definió DATABASE_URL.
-// Coincide con .env.example del proyecto.
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = 'file:./db/custom.db'
-  console.warn('⚠️  DATABASE_URL no definida. Usando fallback: file:./db/custom.db')
-  console.warn('   Para usar otra BD, creá un archivo .env con DATABASE_URL=...')
+// --- 3) Resolver DATABASE_URL con verificación de existencia -------------
+// Si DATABASE_URL apunta a file:./algo o file:algo relativo, lo resolvemos
+// relativo al PROJECT_ROOT (no al cwd). Además, si el archivo no existe,
+// buscamos en ubicaciones comunes.
+function parseSqlitePath(url: string): string | null {
+  // Acepta "file:/abs/path" o "file:./rel/path" o "file:rel/path"
+  const m = /^file:(.+)$/i.exec(url)
+  if (!m) return null
+  return m[1]
 }
 
+function fileExistsAt(absPath: string): boolean {
+  try {
+    const s = statSync(absPath)
+    return s.isFile()
+  } catch {
+    return false
+  }
+}
+
+function resolveDatabaseUrl(): string {
+  const configured = process.env.DATABASE_URL
+
+  // Candidatos a ruta de DB: la configurada + ubicaciones comunes
+  const candidates: { url: string; absPath: string; source: string }[] = []
+
+  if (configured) {
+    const sqlitePath = parseSqlitePath(configured)
+    if (sqlitePath) {
+      const absPath = isAbsolute(sqlitePath)
+        ? sqlitePath
+        : resolve(PROJECT_ROOT, sqlitePath.replace(/^\.\//, ''))
+      candidates.push({ url: `file:${absPath}`, absPath, source: 'DATABASE_URL' })
+    } else {
+      // No es SQLite (postgres/mysql/etc.) — la usamos tal cual
+      return configured
+    }
+  }
+
+  // Ubicaciones comunes para SQLite en este proyecto
+  const commonLocations = [
+    join(PROJECT_ROOT, 'db', 'custom.db'),
+    join(PROJECT_ROOT, 'prisma', 'custom.db'),
+    join(PROJECT_ROOT, 'prisma', 'dev.db'),
+    join(PROJECT_ROOT, 'custom.db'),
+  ]
+  for (const loc of commonLocations) {
+    candidates.push({ url: `file:${loc}`, absPath: loc, source: 'auto-detect' })
+  }
+
+  // Buscamos el primero que exista
+  for (const c of candidates) {
+    if (fileExistsAt(c.absPath)) {
+      if (!configured || c.source === 'DATABASE_URL') {
+        // Si la configurada existe, la usamos (sin log extra)
+        if (!configured) {
+          console.warn(`⚠️  DATABASE_URL no definida. Usando: ${c.url}`)
+          console.warn('   Para usar otra BD, creá un archivo .env con DATABASE_URL=...')
+        }
+        return c.url
+      }
+      // Si la configurada NO existe pero una auto-detectada sí, avisamos
+      console.warn(`⚠️  DATABASE_URL apunta a ${configured} pero el archivo no existe.`)
+      console.warn(`   Usando BD detectada en: ${c.url}`)
+      return c.url
+    }
+  }
+
+  // Ninguna existe. Si la configurada era SQLite, damos error claro.
+  if (configured) {
+    const sqlitePath = parseSqlitePath(configured)
+    if (sqlitePath) {
+      const absPath = isAbsolute(sqlitePath)
+        ? sqlitePath
+        : resolve(PROJECT_ROOT, sqlitePath.replace(/^\.\//, ''))
+      console.error('')
+      console.error(`❌ No se encuentra la base de datos en: ${absPath}`)
+      console.error('   DATABASE_URL dice: ' + configured)
+      console.error('')
+      console.error('   Opciones:')
+      console.error('   1) Corré "bun run db:push" desde el project root para crearla:')
+      console.error(`      cd ${PROJECT_ROOT} && bun run db:push`)
+      console.error('   2) O creá un .env con la ruta correcta:')
+      console.error(`      echo 'DATABASE_URL="file:/ruta/absoluta/a/custom.db"' > ${join(PROJECT_ROOT, '.env')}`)
+      console.error('')
+      process.exit(1)
+    }
+    return configured
+  }
+
+  // No había DATABASE_URL y ninguna ubicación común tenía el archivo
+  console.error('')
+  console.error('❌ No se encontró ninguna base de datos SQLite.')
+  console.error(`   Project root: ${PROJECT_ROOT}`)
+  console.error('   Ubicaciones probadas:')
+  for (const c of candidates) {
+    console.error(`     - ${c.absPath}`)
+  }
+  console.error('')
+  console.error('   Para crear la BD, corré desde el project root:')
+  console.error(`     cd ${PROJECT_ROOT} && bun run db:push`)
+  console.error('   Después volvé a correr este script.')
+  console.error('')
+  process.exit(1)
+}
+
+const RESOLVED_DATABASE_URL = resolveDatabaseUrl()
+process.env.DATABASE_URL = RESOLVED_DATABASE_URL
+
 // --- Ahora sí, importar Prisma (dinámico) y el resto ---------------------
-// Usamos import dinámico para que la carga del .env y el fallback de
+// Usamos import dinámico para que la carga del .env y la resolución de
 // DATABASE_URL ocurran ANTES de que PrismaClient se instancie.
 // Path relativo para evitar problemas de resolución de alias en scripts.
 import bcrypt from 'bcryptjs'
@@ -134,6 +263,7 @@ function printBanner() {
   console.log('  Cambio de contraseña de Super Administrador')
   console.log('==============================================')
   console.log(`  Usuario objetivo: ${TARGET_USERNAME}`)
+  console.log(`  Project root    : ${PROJECT_ROOT}`)
   console.log(`  Base de datos   : ${process.env.DATABASE_URL || '(no definida)'}`)
   console.log('==============================================')
   console.log('')
