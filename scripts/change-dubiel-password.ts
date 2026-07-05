@@ -28,7 +28,7 @@
 //   1) Cargar el archivo .env manualmente si existe
 //   2) Aplicar un fallback razonable si DATABASE_URL no está definida
 //   3) Recién entonces importar dinámicamente `@/lib/db`
-import { readFileSync, existsSync, statSync } from 'fs'
+import { readFileSync, existsSync, statSync, mkdirSync } from 'fs'
 import { resolve, dirname, join, isAbsolute } from 'path'
 
 // --- 1) Encontrar la raíz del proyecto (donde está package.json) ---------
@@ -100,11 +100,16 @@ function loadEnvFile(dir: string = PROJECT_ROOT): void {
 loadEnvFile()
 
 // --- 3) Resolver DATABASE_URL con verificación de existencia -------------
-// Si DATABASE_URL apunta a file:./algo o file:algo relativo, lo resolvemos
-// relativo al PROJECT_ROOT (no al cwd). Además, si el archivo no existe,
-// buscamos en ubicaciones comunes.
+// Reglas:
+//   - Si DATABASE_URL apunta a un SQLite relativo → resolver contra PROJECT_ROOT
+//   - Si DATABASE_URL apunta a un SQLite absoluto que NO existe Y NO está bajo
+//     PROJECT_ROOT → se considera "stale" (env var heredada de otra máquina,
+//     ej. el sandbox) y se IGNORA, cayendo a auto-detección.
+//   - Si no hay DB en ninguna ubicación común → se crea automáticamente con
+//     `bun run db:push` (schema only; el usuario dubiel debe crearse aparte).
+import { execSync } from 'child_process'
+
 function parseSqlitePath(url: string): string | null {
-  // Acepta "file:/abs/path" o "file:./rel/path" o "file:rel/path"
   const m = /^file:(.+)$/i.exec(url)
   if (!m) return null
   return m[1]
@@ -119,26 +124,78 @@ function fileExistsAt(absPath: string): boolean {
   }
 }
 
+function isUnderProject(absPath: string): boolean {
+  const normalized = resolve(absPath)
+  const root = resolve(PROJECT_ROOT)
+  return normalized === root || normalized.startsWith(root + '/')
+}
+
+function runDbPush(): boolean {
+  console.log('')
+  console.log('📦 No se encontró la base de datos. Creándola con "bun run db:push"...')
+  console.log(`   cwd: ${PROJECT_ROOT}`)
+  try {
+    execSync('bun run db:push', {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit',
+      env: { ...process.env, DATABASE_URL: `file:${join(PROJECT_ROOT, 'db', 'custom.db')}` },
+    })
+    return true
+  } catch (e: any) {
+    console.error('')
+    console.error('❌ Falló "bun run db:push".')
+    console.error('   Salida:', e?.message || e)
+    return false
+  }
+}
+
 function resolveDatabaseUrl(): string {
   const configured = process.env.DATABASE_URL
 
-  // Candidatos a ruta de DB: la configurada + ubicaciones comunes
-  const candidates: { url: string; absPath: string; source: string }[] = []
-
+  // --- Paso A: validar la DATABASE_URL configurada ----------------------
   if (configured) {
     const sqlitePath = parseSqlitePath(configured)
     if (sqlitePath) {
       const absPath = isAbsolute(sqlitePath)
         ? sqlitePath
         : resolve(PROJECT_ROOT, sqlitePath.replace(/^\.\//, ''))
-      candidates.push({ url: `file:${absPath}`, absPath, source: 'DATABASE_URL' })
+
+      if (fileExistsAt(absPath)) {
+        // El archivo existe. Si es relativo o está bajo el project root, OK.
+        const isRelative = !isAbsolute(sqlitePath)
+        if (isRelative || isUnderProject(absPath)) {
+          return `file:${absPath}`
+        }
+        // Existe pero FUERA del project root — igual la usamos pero avisamos.
+        console.warn(`⚠️  DATABASE_URL apunta a una BD fuera del project root:`)
+        console.warn(`   ${absPath}`)
+        console.warn(`   Project root: ${PROJECT_ROOT}`)
+        return `file:${absPath}`
+      }
+
+      // El archivo NO existe.
+      if (!isUnderProject(absPath) && isAbsolute(sqlitePath)) {
+        // Absoluto, fuera del project root, inexistente → stale env var.
+        // Típico caso: el sandbox setea DATABASE_URL=file:/home/z/my-project/...
+        // y después corro el script en mi Mac donde esa ruta no existe.
+        console.warn(`⚠️  DATABASE_URL apunta a un archivo inexistente fuera del project root:`)
+        console.warn(`   ${absPath}`)
+        console.warn(`   Project root: ${PROJECT_ROOT}`)
+        console.warn(`   Ignorando DATABASE_URL (probablemente heredada de otra máquina) y`)
+        console.warn(`   buscando la BD dentro del project root...`)
+        // cae a auto-detección
+      } else {
+        // Relativo o bajo project root, pero no existe. También cae a auto-detección.
+        console.warn(`⚠️  DATABASE_URL apunta a un archivo que no existe: ${absPath}`)
+        console.warn(`   Buscando en ubicaciones comunes...`)
+      }
     } else {
       // No es SQLite (postgres/mysql/etc.) — la usamos tal cual
       return configured
     }
   }
 
-  // Ubicaciones comunes para SQLite en este proyecto
+  // --- Paso B: auto-detección en ubicaciones comunes --------------------
   const commonLocations = [
     join(PROJECT_ROOT, 'db', 'custom.db'),
     join(PROJECT_ROOT, 'prisma', 'custom.db'),
@@ -146,62 +203,53 @@ function resolveDatabaseUrl(): string {
     join(PROJECT_ROOT, 'custom.db'),
   ]
   for (const loc of commonLocations) {
-    candidates.push({ url: `file:${loc}`, absPath: loc, source: 'auto-detect' })
-  }
-
-  // Buscamos el primero que exista
-  for (const c of candidates) {
-    if (fileExistsAt(c.absPath)) {
-      if (!configured || c.source === 'DATABASE_URL') {
-        // Si la configurada existe, la usamos (sin log extra)
-        if (!configured) {
-          console.warn(`⚠️  DATABASE_URL no definida. Usando: ${c.url}`)
-          console.warn('   Para usar otra BD, creá un archivo .env con DATABASE_URL=...')
-        }
-        return c.url
+    if (fileExistsAt(loc)) {
+      if (!configured) {
+        console.warn(`✅ BD detectada automáticamente: ${loc}`)
+      } else {
+        console.warn(`✅ BD detectada en: ${loc}`)
       }
-      // Si la configurada NO existe pero una auto-detectada sí, avisamos
-      console.warn(`⚠️  DATABASE_URL apunta a ${configured} pero el archivo no existe.`)
-      console.warn(`   Usando BD detectada en: ${c.url}`)
-      return c.url
+      return `file:${loc}`
     }
   }
 
-  // Ninguna existe. Si la configurada era SQLite, damos error claro.
-  if (configured) {
-    const sqlitePath = parseSqlitePath(configured)
-    if (sqlitePath) {
-      const absPath = isAbsolute(sqlitePath)
-        ? sqlitePath
-        : resolve(PROJECT_ROOT, sqlitePath.replace(/^\.\//, ''))
-      console.error('')
-      console.error(`❌ No se encuentra la base de datos en: ${absPath}`)
-      console.error('   DATABASE_URL dice: ' + configured)
-      console.error('')
-      console.error('   Opciones:')
-      console.error('   1) Corré "bun run db:push" desde el project root para crearla:')
-      console.error(`      cd ${PROJECT_ROOT} && bun run db:push`)
-      console.error('   2) O creá un .env con la ruta correcta:')
-      console.error(`      echo 'DATABASE_URL="file:/ruta/absoluta/a/custom.db"' > ${join(PROJECT_ROOT, '.env')}`)
-      console.error('')
-      process.exit(1)
-    }
-    return configured
+  // --- Paso C: ninguna existe → crear con db:push -----------------------
+  const targetDb = join(PROJECT_ROOT, 'db', 'custom.db')
+  // Asegurar que el directorio db/ exista antes de db:push
+  try {
+    mkdirSync(join(PROJECT_ROOT, 'db'), { recursive: true })
+  } catch {
+    // ignore — db:push fallará con un mensaje claro si no se puede crear
   }
 
-  // No había DATABASE_URL y ninguna ubicación común tenía el archivo
-  console.error('')
-  console.error('❌ No se encontró ninguna base de datos SQLite.')
-  console.error(`   Project root: ${PROJECT_ROOT}`)
-  console.error('   Ubicaciones probadas:')
-  for (const c of candidates) {
-    console.error(`     - ${c.absPath}`)
+  if (!runDbPush()) {
+    console.error('')
+    console.error('❌ No se pudo crear la base de datos automáticamente.')
+    console.error(`   Project root: ${PROJECT_ROOT}`)
+    console.error('')
+    console.error('   Creá la BD manualmente y volvé a correr este script:')
+    console.error(`     cd ${PROJECT_ROOT} && bun run db:push`)
+    console.error('')
+    process.exit(1)
   }
+
+  if (fileExistsAt(targetDb)) {
+    console.log(`✅ BD creada: ${targetDb}`)
+    return `file:${targetDb}`
+  }
+
+  // db:push pudo haberla creado en otra ubicación (según schema.prisma).
+  // Re-buscamos en las ubicaciones comunes.
+  for (const loc of commonLocations) {
+    if (fileExistsAt(loc)) {
+      console.log(`✅ BD creada: ${loc}`)
+      return `file:${loc}`
+    }
+  }
+
   console.error('')
-  console.error('   Para crear la BD, corré desde el project root:')
-  console.error(`     cd ${PROJECT_ROOT} && bun run db:push`)
-  console.error('   Después volvé a correr este script.')
-  console.error('')
+  console.error('❌ db:push se ejecutó pero no se encontró el archivo custom.db.')
+  console.error('   Revisá la salida arriba y los permisos del directorio db/.')
   process.exit(1)
 }
 
