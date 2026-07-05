@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     // Create session token and set cookie
     const token = createSessionToken(user.id)
-    setSessionCookie(token)
+    await setSessionCookie(token)
 
     // Update last login
     await db.user.update({
