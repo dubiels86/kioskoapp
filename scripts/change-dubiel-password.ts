@@ -11,18 +11,82 @@
  *   TARGET_USERNAME=otroUsuario bun run scripts/change-dubiel-password.ts
  *
  * El script:
- *   1. Pide (o recibe) la nueva contraseña (mínimo 8 caracteres)
- *   2. Pide confirmación (sólo en modo interactivo)
- *   3. Verifica que el usuario exista y esté activo
- *   4. Hashea con bcrypt y actualiza la contraseña en la BD
- *   5. Verifica que el nuevo hash valide la nueva contraseña
- *   6. Muestra un resumen con el estado final
+ *   1. Carga .env automáticamente (si existe) y aplica un fallback por defecto
+ *   2. Pide (o recibe) la nueva contraseña (mínimo 4 caracteres)
+ *   3. Pide confirmación (sólo en modo interactivo)
+ *   4. Verifica que el usuario exista y esté activo
+ *   5. Hashea con bcrypt y actualiza la contraseña en la BD
+ *   6. Verifica que el nuevo hash valide la nueva contraseña
+ *   7. Muestra un resumen con el estado final
  *
  * Nota de seguridad: la contraseña NUNCA se imprime en el log.
  */
-import { db } from '@/lib/db'
+
+// --- Cargar .env ANTES de importar Prisma --------------------------------
+// Prisma lee DATABASE_URL en el momento de instanciación (import estático),
+// así que tenemos que:
+//   1) Cargar el archivo .env manualmente si existe
+//   2) Aplicar un fallback razonable si DATABASE_URL no está definida
+//   3) Recién entonces importar dinámicamente `@/lib/db`
+import { readFileSync, existsSync } from 'fs'
+import { resolve } from 'path'
+
+function loadEnvFile(dir: string = process.cwd()): void {
+  // Busca .env en el directorio dado y en los padres hasta encontrarlo.
+  let current = dir
+  for (let i = 0; i < 6; i++) {
+    const envPath = resolve(current, '.env')
+    if (existsSync(envPath)) {
+      try {
+        const content = readFileSync(envPath, 'utf-8')
+        for (const rawLine of content.split('\n')) {
+          const line = rawLine.trim()
+          if (!line || line.startsWith('#')) continue
+          const eq = line.indexOf('=')
+          if (eq === -1) continue
+          const key = line.slice(0, eq).trim()
+          let value = line.slice(eq + 1).trim()
+          // Quita comillas envolventes
+          if (
+            (value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))
+          ) {
+            value = value.slice(1, -1)
+          }
+          // No sobreescribe variables ya presentes en el entorno real
+          if (!(key in process.env)) {
+            process.env[key] = value
+          }
+        }
+        return
+      } catch {
+        // Si falla la lectura, seguimos buscando en el padre
+      }
+    }
+    const parent = resolve(current, '..')
+    if (parent === current) break
+    current = parent
+  }
+}
+
+loadEnvFile()
+
+// Fallback por defecto si nadie definió DATABASE_URL.
+// Coincide con .env.example del proyecto.
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = 'file:./db/custom.db'
+  console.warn('⚠️  DATABASE_URL no definida. Usando fallback: file:./db/custom.db')
+  console.warn('   Para usar otra BD, creá un archivo .env con DATABASE_URL=...')
+}
+
+// --- Ahora sí, importar Prisma (dinámico) y el resto ---------------------
+// Usamos import dinámico para que la carga del .env y el fallback de
+// DATABASE_URL ocurran ANTES de que PrismaClient se instancie.
+// Path relativo para evitar problemas de resolución de alias en scripts.
 import bcrypt from 'bcryptjs'
 import readline from 'readline'
+
+const { db } = await import('../src/lib/db')
 
 const TARGET_USERNAME = process.env.TARGET_USERNAME || 'dubiel'
 // Si FORCE_WEAK=1, no se emiten advertencias de fortaleza (sigue habiendo mínimo duro de 4).
