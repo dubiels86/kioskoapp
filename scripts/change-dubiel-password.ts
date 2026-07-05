@@ -381,19 +381,92 @@ async function getNewPassword(): Promise<string> {
   return pwd1
 }
 
+// --- Helper: crear el super admin si no existe ---------------------------
+// Permisos completos del Super Administrador (mismo set que create-super-admin.ts)
+const ALL_PERMISSIONS = [
+  'pos.access', 'pos.refund',
+  'inventory.access', 'inventory.manage',
+  'purchases.access', 'purchases.manage',
+  'expenses.access', 'expenses.manage',
+  'cash.access', 'cash.open', 'cash.close',
+  'repairs.access', 'repairs.manage',
+  'reports.access',
+  'settings.access', 'settings.users', 'settings.roles', 'settings.all',
+]
+
+const SUPER_ADMIN_ROLE_NAME = 'Super Administrador'
+const SUPER_ADMIN_NAME = 'Dubiel'
+// Contraseña temporal con la que se crea el usuario; se cambia de inmediato
+// por la que el usuario eligió. No se usa para login.
+const TEMP_PLACEHOLDER_PASSWORD = 'TempPlaceholder!ChangeMe!2026'
+
+async function ensureSuperAdminExists(username: string): Promise<void> {
+  console.log('')
+  console.log(`📦 El usuario "${username}" no existe. Creándolo como Super Administrador...`)
+  console.log('')
+
+  // 1. Crear o actualizar el rol "Super Administrador"
+  let role = await db.role.findFirst({ where: { name: SUPER_ADMIN_ROLE_NAME } })
+  if (role) {
+    role = await db.role.update({
+      where: { id: role.id },
+      data: {
+        permissions: JSON.stringify(ALL_PERMISSIONS),
+        description: 'Acceso total al sistema - Super Administrador',
+        isActive: true,
+      },
+    })
+    console.log(`  ✅ Rol "${SUPER_ADMIN_ROLE_NAME}" actualizado con todos los permisos`)
+  } else {
+    role = await db.role.create({
+      data: {
+        name: SUPER_ADMIN_ROLE_NAME,
+        description: 'Acceso total al sistema - Super Administrador',
+        permissions: JSON.stringify(ALL_PERMISSIONS),
+        isActive: true,
+      },
+    })
+    console.log(`  ✅ Rol "${SUPER_ADMIN_ROLE_NAME}" creado con todos los permisos`)
+  }
+
+  // 2. Crear el usuario con contraseña temporal (se sobrescribe enseguida)
+  const hashedPlaceholder = await bcrypt.hash(TEMP_PLACEHOLDER_PASSWORD, 10)
+  await db.user.create({
+    data: {
+      username,
+      password: hashedPlaceholder,
+      name: SUPER_ADMIN_NAME,
+      email: 'dubiel@kioskoapp.com',
+      roleId: role.id,
+      isActive: true,
+    },
+  })
+  console.log(`  ✅ Usuario "${username}" creado (rol: ${SUPER_ADMIN_ROLE_NAME}, activo)`)
+  console.log(`     La contraseña temporal se reemplazará por la que ingresaste arriba.`)
+  console.log('')
+}
+
 async function changePassword() {
   printBanner()
 
   // 1. Verificar que el usuario exista
-  const user = await db.user.findUnique({
+  let user = await db.user.findUnique({
     where: { username: TARGET_USERNAME },
     include: { role: true },
   })
 
   if (!user) {
-    console.error(`❌ No existe el usuario "${TARGET_USERNAME}" en la base de datos.`)
-    console.error('   Crealo primero con: bun run scripts/create-super-admin.ts')
-    process.exit(1)
+    // Auto-crear el super admin si no existe (no fallar)
+    await ensureSuperAdminExists(TARGET_USERNAME)
+    // Re-leer el usuario recién creado
+    user = await db.user.findUnique({
+      where: { username: TARGET_USERNAME },
+      include: { role: true },
+    })
+    if (!user) {
+      console.error('❌ Error inesperado: el usuario no se pudo crear ni releer.')
+      process.exit(1)
+    }
   }
 
   console.log(`✅ Usuario encontrado:`)
