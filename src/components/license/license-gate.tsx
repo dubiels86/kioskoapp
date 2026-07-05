@@ -158,38 +158,9 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     refreshStatus()
   }, [refreshStatus])
 
-  // Check if the user is already logged in (e.g., the admin opened the app
-  // in a tab where they had a previous session). This lets us show the trial
-  // button immediately without forcing them to log in again.
-  useEffect(() => {
-    let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch('/api/auth/session', { credentials: 'same-origin' })
-        const data = (await res.json().catch(() => null)) as {
-          authenticated?: boolean
-          user?: { username: string; name: string; permissions: string[] }
-        } | null
-        if (cancelled) return
-        if (data?.authenticated && data.user) {
-          setAuthUser({
-            username: data.user.username,
-            name: data.user.name,
-            permissions: data.user.permissions,
-          })
-        } else {
-          setAuthUser(null)
-        }
-      } catch {
-        if (!cancelled) setAuthUser(null)
-      } finally {
-        if (!cancelled) setAuthChecked(true)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  // NOTE: The session check is handled centrally by src/app/page.tsx on mount,
+  // which updates the Zustand store (user / isLoadingAuth). We just read those
+  // values here via useAppStore — no duplicate fetch needed.
 
   // When the license is active/grace, ensure the gate cookie is present in the
   // browser before rendering the children. A fresh browser session has no
