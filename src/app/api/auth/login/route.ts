@@ -43,24 +43,36 @@ export async function POST(request: Request) {
       )
     }
 
-    // If the password was base64-encoded (legacy), upgrade it to bcrypt
+    // If the password was base64-encoded (legacy), upgrade it to bcrypt.
+    // This is a NON-CRITICAL write — if it fails (e.g. read-only DB, permission
+    // issue), we still log the user in. We'll retry on next login.
     if (!user.password.startsWith('$2a$') && !user.password.startsWith('$2b$') && !user.password.startsWith('$2y$')) {
-      const newHash = await hashPassword(password)
-      await db.user.update({
-        where: { id: user.id },
-        data: { password: newHash },
-      })
+      try {
+        const newHash = await hashPassword(password)
+        await db.user.update({
+          where: { id: user.id },
+          data: { password: newHash },
+        })
+      } catch (upgradeErr) {
+        console.warn('Login: no se pudo actualizar el hash de contraseña (non-critical):', upgradeErr?.message || upgradeErr)
+      }
     }
 
     // Create session token and set cookie
     const token = createSessionToken(user.id)
     await setSessionCookie(token)
 
-    // Update last login
-    await db.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    })
+    // Update last login timestamp. NON-CRITICAL — if the DB write fails
+    // (read-only file, permission issue, etc.), we still return a successful
+    // login so the user can use the app. The session cookie is already set.
+    try {
+      await db.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() },
+      })
+    } catch (lastLoginErr) {
+      console.warn('Login: no se pudo actualizar lastLogin (non-critical):', lastLoginErr?.message || lastLoginErr)
+    }
 
     return NextResponse.json({
       user: {
